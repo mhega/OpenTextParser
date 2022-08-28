@@ -1,5 +1,4 @@
 import javax.swing.*;
-import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.*;
@@ -7,7 +6,12 @@ import java.io.*;
 
 public class TextParser extends JFrame
 {
-	
+	/** 
+	 * Text Parser V 2.0
+	 * Author: Mohamed Hegazy
+	 */
+	private static final long serialVersionUID = 9206356051216703918L;
+	private String version = "2.0";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -102,7 +106,7 @@ public class TextParser extends JFrame
 		
 	public void assemble()
 	{	
-		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;1.0<br>"+
+		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;"+version+"<br>"+
 				"Performs text cleanup / transformation according to the selected module.<br><br>";
 		aboutTextFooter = "<br>Created by Mohamed Hegazy</div></html>";
 		aboutDialog = new JDialog(this,"Text Parser");

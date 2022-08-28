@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.function.Function;
 import java.util.regex.*;
 
 public abstract class Module
@@ -34,24 +35,24 @@ public abstract class Module
 			boolean hasMemoryAddresses = hasMemoryAddresses(input);
 			if(hasMemoryAddresses)
 			{
-				listOfDefaultReplaceables.add(new Replaceable().setMethod("clearLastDoubleQuote"));
+				listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> clearLastDoubleQuote(s)));
 				listOfDefaultReplaceables.add(new Replaceable(memoryAddressRegexp,""));
 				
 			}
 
-			listOfDefaultReplaceables.add(new Replaceable().setMethod("replaceAllWithNTimes"));
-			listOfDefaultReplaceables.add(new Replaceable().setMethod("markCommentedLines"));
+			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> replaceAllWithNTimes(s)));
+			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> markCommentedLines(s)));
 
 			if(!hasMemoryAddresses)
 			{
-				listOfDefaultReplaceables.add(new Replaceable().setMethod("clearNewLines"));
+				listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> clearNewLines(s)));
 			}
 
 			listOfDefaultReplaceables.add(new Replaceable(("\\\\n"),"\n"));
 			listOfDefaultReplaceables.add(new Replaceable(("\\\\r"),"\n"));
 			listOfDefaultReplaceables.add(new Replaceable(("\\\\t"),"\t"));
 			listOfDefaultReplaceables.add(new Replaceable(("\\\\\""),"\""));
-			listOfDefaultReplaceables.add(new Replaceable().setMethod("restoreCommentedLinesStatus"));
+			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> restoreCommentedLinesStatus(s)));
 
 
 			//####################################################################################################################
@@ -186,10 +187,11 @@ public abstract class Module
 	protected abstract void replace(String input);
 
 	
-	protected String callMethod(String methodName, String input) throws Exception
+	protected String callMethod(Function<String,String> method, String input) throws Exception
 	{
 		String output = "";
-		output = (String)(this.getClass().getMethod(methodName, Class.forName("java.lang.String")).invoke((Object)this, (Object)input));
+		//output = (String)(this.getClass().getMethod(methodName, Class.forName("java.lang.String")).invoke((Object)this, (Object)input));
+		output = method.apply(input);
 		return output;
 	}
 	
@@ -218,31 +220,31 @@ class Replaceable
 {
 	protected String regex;
 	protected String replacement;
-	protected String callMethodToReplace;
+	protected Function<String,String> callMethodToReplace = null;
 
 	public Replaceable(String regex, String replacement)
 	{
 		this.regex = regex;
 		this.replacement = replacement;
-		this.callMethodToReplace = "";
+		//this.callMethodToReplace = "";
 	}
 
 	public Replaceable()
 	{
 		this.regex = "";
 		this.replacement = "";
-		this.callMethodToReplace = "";
+		//this.callMethodToReplace = "";
 	}
 	
-	public Replaceable setMethod(String methodName)
+	public Replaceable setMethod(Function<String,String> method)
 	{
-		this.callMethodToReplace = methodName;
+		this.callMethodToReplace = method;
 		return this;
 	}
 	
 	protected boolean replaceViaCallMethod()
 	{
-		return !("".equals(callMethodToReplace));
+		return !(callMethodToReplace == null);
 	}
 	
 }
