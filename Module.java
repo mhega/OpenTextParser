@@ -182,7 +182,7 @@ public abstract class Module
 	};
 	
 	
-	protected ArrayList<Replaceable> listOfDefaultReplaceables = new ArrayList<Replaceable>();
+	protected ArrayList<Replaceable> listOfDefaultReplaceables;
 	
 	protected abstract void replace(String input);
 
@@ -197,7 +197,7 @@ public abstract class Module
 	
 	public String runReplacements(String input) throws Exception
 	{
-		
+		listOfDefaultReplaceables  = new ArrayList<Replaceable>();
 		replace(input);
 		Replaceable[] replaceables = listOfDefaultReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
