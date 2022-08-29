@@ -7,11 +7,11 @@ import java.io.*;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.0
+	 * Text Parser V 2.1
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.0";
+	private String version = "2.1";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
