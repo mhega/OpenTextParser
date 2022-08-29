@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.StringTokenizer;
 import java.util.function.Function;
 import java.util.regex.*;
 
@@ -15,7 +16,101 @@ public abstract class Module
 		}
 		
 	};
-	
+
+	public static final Module FILERTBLHDR = new Module()
+	{
+		protected void replace(String input)
+		{
+			//listOfDefaultReplaceables.add(new Replaceable(("(.*?[\r\n])*?\\s*Database Name : \"(.*?)\"\\s*[\r\n]([(.*?:.*?)(\\s*)][\r\n])*?\\s*Table Name : \"(.*?)\"\\s*[\r\n](.*?[\r\n])*?\\s*Protection    : (.*?)[\r\n](.*?[\r\n])*?"),"+$2.$4 - $6\n"));
+			//listOfDefaultReplaceables.add(new Replaceable(("((\\+(.*?)\\s*?[\r\n])*)(.*?[\r\n$])*?"),"$1"));
+			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> processFiler(s)));
+		}
+		
+		/*private String processFiler2(String input)
+		{
+			StringBuffer replacement = new StringBuffer();
+			Matcher p = Pattern.compile("(.*?[\r\n])*?\\s*Database Name : \"(.*?)\"\\s*[\r\n]"+
+			"([(.*?:.*?)(\\s*)][\r\n])*?\\s*Table Name : \"(.*?)\"\\s*[\r\n]"+
+			"(.*?[\r\n])*?\\s*Protection    : (.*?)[\r\n]").matcher(input); 	
+			//"([(.*?:.*?)(\\s*?)][\r\n])*?\\s*Protection    : (.*?)[\r\n]").matcher(input); 	
+
+			while(p.find())
+			{
+				replacement.append(p.group(2)+"."+p.group(4)+ " ("+ p.group(6).trim() + ")\n");
+			}
+			return replacement.toString();
+		}*/
+		
+		private String processFiler(String input)
+		{
+			StringBuffer replacement = new StringBuffer();
+			Record record = new Record();
+			StringTokenizer tokenizer = new StringTokenizer(input, "\n");
+			String currentToken = "";
+			Pattern pDb = Pattern.compile("\\s*Database Name : \"(.*?)\"\\s*");
+			Pattern pTb = Pattern.compile("\\s*Table Name : \"(.*?)\"\\s*");
+			Pattern pFb = Pattern.compile("\\s*Protection    : (.*?)$");
+			Pattern[] validationArray  = new Pattern[]{pDb,pTb,pFb};
+			int next = 0;
+			Matcher currentMatcher = null;
+			String currentDb = "";
+			String currentTable = "";
+			String currentProtection = "";
+			while(tokenizer.hasMoreTokens())
+			{
+				currentToken = tokenizer.nextToken();
+
+				if((currentMatcher = pDb.matcher(currentToken)).find())
+				{
+					if(pDb.equals(validationArray[next%validationArray.length]))
+					{
+						currentDb = currentMatcher.group(1);
+						replacement.append(currentMatcher.group(1));
+						next++;
+					}
+					else
+					{
+						throw new TextParserException("Invalid Filer Text");
+					}
+				}
+				else if((currentMatcher = pTb.matcher(currentToken)).find())
+				{
+					if(pTb.equals(validationArray[next%validationArray.length]))
+					{
+						currentTable = currentMatcher.group(1);
+						replacement.append("."+currentTable);
+						next++;
+					}
+					else
+					{
+						throw new TextParserException("Invalid Filer Text");
+					}
+				}
+				else if((currentMatcher = pFb.matcher(currentToken)).find())
+				{
+					if(pFb.equals(validationArray[next%validationArray.length]))
+					{
+						currentProtection = currentMatcher.group(1).trim();
+						replacement.append("  ("+currentProtection+")\n");
+						record.addRecord(currentDb+"."+currentTable, currentProtection);
+						currentDb = "";
+						currentTable = "";
+						currentProtection = "";
+						next++;
+					}
+					else
+					{
+						throw new TextParserException("Invalid Filer Text");
+					}
+				}
+			}
+			if(!pDb.equals(validationArray[next%validationArray.length]))
+				throw new TextParserException("Invalid or incomplete Filer Text");
+			//return replacement.toString();
+			return record.stringValue();
+		
+		}
+	};
 	
 	public static final Module SQLCLEANER = new Module()
 	{
@@ -245,6 +340,21 @@ class Replaceable
 	protected boolean replaceViaCallMethod()
 	{
 		return !(callMethodToReplace == null);
+	}
+	
+}
+
+class TextParserException extends RuntimeException
+{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4310496290737841066L;
+	
+	public TextParserException(String message)
+	{
+		super(message);
 	}
 	
 }

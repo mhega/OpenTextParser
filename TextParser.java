@@ -7,11 +7,11 @@ import java.io.*;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.2
+	 * Text Parser V 2.3
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.2";
+	private String version = "2.3";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -103,6 +103,15 @@ public class TextParser extends JFrame
 		{ioe.printStackTrace();}
     		return null;
 	}
+ 	
+ 	private void processException(Exception e)
+ 	{
+		e.printStackTrace();
+		if(e instanceof TextParserException)
+			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! "+e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+		else
+			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! Please consult the developer","Error",JOptionPane.ERROR_MESSAGE);
+ 	}
 		
 	public void assemble()
 	{	
@@ -135,6 +144,7 @@ public class TextParser extends JFrame
 		
 
 		txt.setEditable(false);
+		txt.setFont(Font.decode("Lucida Console"));
 		txt.setText("Please use CTRL+V to paste text..");
 
 		txt.addKeyListener(new KeyAdapter()
@@ -155,8 +165,7 @@ public class TextParser extends JFrame
 				}
 				catch(Exception e)
 				{
-					e.printStackTrace();
-					JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! Please consult the developer","Error",JOptionPane.ERROR_MESSAGE);
+					processException(e);
 				}
 			}
 		});
@@ -202,8 +211,7 @@ public class TextParser extends JFrame
 				}
 				catch(Exception e)
 				{
-					e.printStackTrace();
-					JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! Please consult the developer","Error",JOptionPane.ERROR_MESSAGE);
+					processException(e);
 				}
 			}
 		});
@@ -226,8 +234,9 @@ public class TextParser extends JFrame
 		
 		ModuleRegistrant reg = new ModuleRegistrant(mnModules,  moduleButtonGroup);
 		reg.registerModule(false, Module.SQLCLEANER, "SQLCleaner", "Please use CTRL+V to paste SQL text..", "Cleans SQL extracted from Teradata Database dumps");
-		reg.registerModule(true, Module.CENTRIFYCLEANER, "CentrifyTextParser", "Please use CTRL+V to paste CENTRIFY text...", "Cleans Text extracted from Centrify connections");
-		
+		reg.registerModule(false, Module.CENTRIFYCLEANER, "CentrifyTextParser", "Please use CTRL+V to paste CENTRIFY text...", "Cleans Text extracted from Centrify connections");
+		reg.registerModule(true, Module.FILERTBLHDR, "FilerTableHeader", "Please use CTRL+V to paste Filer text...", "Extracts table information from Table Headers");
+
 		
 	}
 
