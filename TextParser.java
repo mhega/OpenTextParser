@@ -1,17 +1,19 @@
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.*;
 import java.io.*;
+import java.util.logging.Level;
 
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.3
+	 * Text Parser V 2.5
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.3";
+	private String version = "2.5";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -33,6 +35,7 @@ public class TextParser extends JFrame
 			{
 				public void actionPerformed(ActionEvent ae)
 				{
+					AppLogger.getLogger().info("Switching to "+moduleName);
 					TextParser.this.replacerModule = module;
 					TextParser.this.setTitle(TextParser.this.title+" - "+ moduleName);
 					if (!"".equals(promptText))
@@ -84,6 +87,7 @@ public class TextParser extends JFrame
 	private final JMenu mnModules = new JMenu("Modules");
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
 	private Module replacerModule;
+	private ConsoleDialog consoleDialog;
 
  	private String getClipboard()
 	{
@@ -106,13 +110,52 @@ public class TextParser extends JFrame
  	
  	private void processException(Exception e)
  	{
-		e.printStackTrace();
+ 		AppLogger.getLogger().log(Level.SEVERE, "An Unexpected Exception Occurred", e);
 		if(e instanceof TextParserException)
-			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! "+e.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! \""+e.getMessage()+"\". Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
 		else
-			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! Please consult the developer","Error",JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(TextParser.this,"Exception Occurred! Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
  	}
-		
+ 	private class ConsoleDialog extends JDialog {
+ 		
+ 		/**
+ 		 * 
+ 		 */
+ 		private static final long serialVersionUID = 1L;
+ 		private JMenuItem openConsole = new JMenuItem("Console");
+ 		private JTextArea consoleTextArea = new JTextArea();
+ 		private JScrollPane consoleScrollPane = new JScrollPane(consoleTextArea);
+ 		public ConsoleDialog(Frame owner, String title)
+ 		{
+ 			super(owner,title);
+ 			openConsole.setVisible(false); //By default set as invisible until collection is executed.	
+ 			
+ 			consoleTextArea.setEditable(false);
+ 			consoleTextArea.setFont(Font.decode("Lucida Console"));
+ 			this.setModalityType(Dialog.ModalityType.valueOf("APPLICATION_MODAL"));
+ 			this.add(consoleScrollPane,BorderLayout.CENTER);
+ 			this.setSize(1200, 400);
+ 			
+ 			
+ 			openConsole.addActionListener(new ActionListener()
+ 			{
+ 				public void actionPerformed(ActionEvent ae)
+ 				{
+ 					ConsoleDialog.this.setLocationRelativeTo(TextParser.this.file);
+ 					ConsoleDialog.this.setVisible(true);
+ 				}
+ 			});
+ 		}
+ 		public JTextArea getTextArea()
+ 		{
+ 			return consoleTextArea;
+ 		}
+ 		public JMenuItem getConsoleButton()
+ 		{
+ 			return openConsole;
+ 		}
+ 	}
+ 	
 	public void assemble()
 	{	
 		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;"+version+"<br>"+
@@ -132,6 +175,13 @@ public class TextParser extends JFrame
 		scrollPane = new JScrollPane(txt);
 		file.add(about);
 		file.add(exit);
+		
+		consoleDialog = new ConsoleDialog((JFrame) SwingUtilities.getWindowAncestor(this),"Console");
+		JTextArea consoleArea = consoleDialog.getTextArea();
+		JMenuItem displayConsoleDialogItem = consoleDialog.getConsoleButton();
+		displayConsoleDialogItem.setVisible(true);
+		file.add(displayConsoleDialogItem);
+		
 		edit.add(copy);
 		edit.add(paste);
 		file.setMnemonic(KeyEvent.VK_F);
@@ -139,9 +189,14 @@ public class TextParser extends JFrame
 		about.setMnemonic(KeyEvent.VK_A);
 		copy.setMnemonic(KeyEvent.VK_C);
 		paste.setMnemonic(KeyEvent.VK_P);
+
+
 		mainMenu.add(file);
 		mainMenu.add(edit);
 		
+		AppLogger.getLogger("TextParser", null, null, AppLogger.ONELINEFORMATTER);
+		AppLogger.setTextArea(consoleArea);
+
 
 		txt.setEditable(false);
 		txt.setFont(Font.decode("Lucida Console"));
@@ -182,6 +237,7 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
+				aboutDialog.setLocationRelativeTo(TextParser.this.file);
 				aboutDialog.setVisible(true);
 			}
 		});

@@ -7,7 +7,79 @@ import java.util.regex.*;
 
 public abstract class Module
 {
+/*
+ * 2 steps below are needed for defining and registering a new Module to the application:
+ * 
+ *  Step (1).  Step 1 is to be implemented in "Module.java"
+ *  -------------------------------------------------------
+ *  
+ *  This step implements the logic of the desired module.
+ *  See example code snippet below for line numbers.
+ *  
+ *  * Line 1. 		Instantiate a static final object of an anonymous subclass of the abstract class "Module".
+ *  
+ *  * Line 3. 		Override abstract method "replace" to define your own implementation of the module.
+ *  
+ *  * Lines 5-6		Add as many calls as needed to "listOfDefaultReplaceables.add()" function
+ *  				for implementing replacement logic.
+ *  				This can be achieved through specifying on-the-fly regexp-replacement pair as in line 5
+ *  				or specifying a function (method) to be called for complex replacement logic as in line 6. 
+ *  				In line 6, the syntax in setMethod (s -> replacementFunction(s)) is for creating a lambda function to encapsulate the custom created function.
+ *  				Replacement is performed in the same order as calls are made to "add()".
+ *  				i.e., the output of each replacement is fed as an input to the next replacement.
+ *  
+ *  * Lines 9-11	Define the body of the custom function(s) in line 6. 
+ *  
+ *  1.	public static final Module FILERTBLHDR = new Module()
+ *  2.	{
+ *  3.		protected void replace(String input)
+ *  4.		{
+ *  5.			listOfDefaultReplaceables.add(new Replaceable("<<Regular Expression pattern to look for>>","<<Replacement Text>>"));
+ *  			AND/OR
+ *  6.			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> replacementFunction(s)));
+ *  			:::
+ *  7.		}
+ *  8.
+ *  9.		private String replacementFunction(String input)
+ *  10.		{
+ *  			::::	//This is your own code. Do whatever is needed to transform the input String and return the result String back to the caller.
+ *  11.		}
+ *  12.	}
+ *  
+ *  
+ *  Step (2).  Step 2 is to be implemented in "TextParser.java"
+ *  -----------------------------------------------------------
+ *  
+ *  This step registers the previously created logic (Module object) to the GUI (TextParser)
+ *  See example code snippet below for line numbers.
+ *  
+ * 	Line 3.			At the very end of the body of the "assemble" function, call registerModule function
+ * 					to register the previously created Module instant to the application GUI.
+ * 					
+ * 					"reg" is an instance of "ModuleRegistrant" class
+ * 					which is in charge of creating the GUI components of the module and linking them to the Module.
+ * 					
+ * 					Parameters of registerModule:
+ * 
+ * 						   Parameter Name		Type						
+ * 						1. isDefaultModule	-	boolean (true/false)	-	whether this is the default module when the program loads.
+ * 																			Specify only one default module.
+ * 						2. module			-	Module					- 	The static "Module" object which was created in step 1.
+ * 						3. moduleName		-	String					-	The name of the module as desired to be used in various parts of the GUI.
+ * 						4. promptText		-	String					-	The prompt string to be initially displayed in the Paste area when the module is selected.
+ * 						5. aboutText		-	String					-	A one-liner description of the module to be displayed in the "About" dialog box.
+ * 
+ *	1.	public void assemble()
+ *	2.	{
+ *			::::	//No changes needed in the "assemble" body other than adding the next line.
+ *	3.		reg.registerModule(true, Module.FILERTBLHDR, "FilerTableHeader", "Please use CTRL+V to paste Filer text...", "Extracts table information from Table Headers");
+ *	4.	}
 
+ *
+ *
+ * 
+ * */
+	
 	public static final Module CENTRIFYCLEANER = new Module()
 	{
 		protected void replace(String input)
@@ -21,35 +93,24 @@ public abstract class Module
 	{
 		protected void replace(String input)
 		{
-			//listOfDefaultReplaceables.add(new Replaceable(("(.*?[\r\n])*?\\s*Database Name : \"(.*?)\"\\s*[\r\n]([(.*?:.*?)(\\s*)][\r\n])*?\\s*Table Name : \"(.*?)\"\\s*[\r\n](.*?[\r\n])*?\\s*Protection    : (.*?)[\r\n](.*?[\r\n])*?"),"+$2.$4 - $6\n"));
-			//listOfDefaultReplaceables.add(new Replaceable(("((\\+(.*?)\\s*?[\r\n])*)(.*?[\r\n$])*?"),"$1"));
 			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> processFiler(s)));
 		}
 		
-		/*private String processFiler2(String input)
-		{
-			StringBuffer replacement = new StringBuffer();
-			Matcher p = Pattern.compile("(.*?[\r\n])*?\\s*Database Name : \"(.*?)\"\\s*[\r\n]"+
-			"([(.*?:.*?)(\\s*)][\r\n])*?\\s*Table Name : \"(.*?)\"\\s*[\r\n]"+
-			"(.*?[\r\n])*?\\s*Protection    : (.*?)[\r\n]").matcher(input); 	
-			//"([(.*?:.*?)(\\s*?)][\r\n])*?\\s*Protection    : (.*?)[\r\n]").matcher(input); 	
-
-			while(p.find())
-			{
-				replacement.append(p.group(2)+"."+p.group(4)+ " ("+ p.group(6).trim() + ")\n");
-			}
-			return replacement.toString();
-		}*/
-		
 		private String processFiler(String input)
 		{
-			StringBuffer replacement = new StringBuffer();
+			//StringBuffer replacement = new StringBuffer();
 			Record record = new Record();
 			StringTokenizer tokenizer = new StringTokenizer(input, "\n");
 			String currentToken = "";
-			Pattern pDb = Pattern.compile("\\s*Database Name : \"(.*?)\"\\s*");
-			Pattern pTb = Pattern.compile("\\s*Table Name : \"(.*?)\"\\s*");
-			Pattern pFb = Pattern.compile("\\s*Protection    : (.*?)$");
+			Pattern pDb = Pattern.compile("\\s*Database Name\\s+:\\s+\"(.*?)\"\\s*");
+			Pattern pTb = Pattern.compile("\\s*Table Name\\s+:\\s+\"(.*?)\"\\s*");
+			Pattern pFb = Pattern.compile("\\s*Protection\\s+:\\s+(.*?)$");
+			/*
+			 * The intent of this validation array here is to make sure
+			 *  occurrences of DatabaseName, TableName, and Protection matches are in the expected order.
+			 * The "next" counter is incremented within the tokenizer loop
+			 *  and used to perform a mod operation with the array length for order validation.
+			 * */
 			Pattern[] validationArray  = new Pattern[]{pDb,pTb,pFb};
 			int next = 0;
 			Matcher currentMatcher = null;
@@ -65,7 +126,7 @@ public abstract class Module
 					if(pDb.equals(validationArray[next%validationArray.length]))
 					{
 						currentDb = currentMatcher.group(1);
-						replacement.append(currentMatcher.group(1));
+						//replacement.append(currentMatcher.group(1));
 						next++;
 					}
 					else
@@ -78,7 +139,7 @@ public abstract class Module
 					if(pTb.equals(validationArray[next%validationArray.length]))
 					{
 						currentTable = currentMatcher.group(1);
-						replacement.append("."+currentTable);
+						//replacement.append("."+currentTable);
 						next++;
 					}
 					else
@@ -91,7 +152,7 @@ public abstract class Module
 					if(pFb.equals(validationArray[next%validationArray.length]))
 					{
 						currentProtection = currentMatcher.group(1).trim();
-						replacement.append("  ("+currentProtection+")\n");
+						//replacement.append("  ("+currentProtection+")\n");
 						record.addRecord(currentDb+"."+currentTable, currentProtection);
 						currentDb = "";
 						currentTable = "";
