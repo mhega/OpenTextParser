@@ -9,11 +9,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.5
+	 * Text Parser V 2.6
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.5";
+	private String version = "2.6";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;

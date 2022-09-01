@@ -213,23 +213,9 @@ public abstract class Module
 
 			//####################################################################################################################
 		}
-		
-		//####################################################################################################################
-		//####### (Note: All the methods that are being called from callMethod have to be public even though they are in #####
-		//####### the same class. Using getMethod method failed to identify private classes                              #####
-		//####################################################################################################################
-
-		// Example:
-		// public String exampleMethod(String input)
-		// {
-		//		//transform the input String object..
-		//
-		//		return input
-		// }
-		//
 
 		
-		public String markCommentedLines(String input)
+		private String markCommentedLines(String input)
 		{
 			commentStates = new Hashtable<java.lang.Double, String>();
 			double mark;
@@ -255,7 +241,7 @@ public abstract class Module
 			return input;	
 		}
 
-		public String restoreCommentedLinesStatus(String input)
+		private String restoreCommentedLinesStatus(String input)
 		{
 			
 			Enumeration<Double> keys = commentStates.keys();
@@ -272,13 +258,13 @@ public abstract class Module
 			return input;
 		}
 		
-		public String parseComment(String input) //Added on 3-19: Since a commented line may be ending with unparsed \r or \n, which has been saved in commentStates
+		private String parseComment(String input) //Added on 3-19: Since a commented line may be ending with unparsed \r or \n, which has been saved in commentStates
 		{
 			input=input.replaceAll("\\\\r|\\\\n","\n");
 			return input;
 		}
 
-		public String clearLastDoubleQuote(String input) //Clears a possibly existing exessive double quote in SQL that contains memory addresses
+		private String clearLastDoubleQuote(String input) //Clears a possibly existing exessive double quote in SQL that contains memory addresses
 		{
 			input = input.replaceAll("\"([.][.][.])?+[\n ]*$","");
 			input = input.replaceAll("\\\\$","\\\"");
@@ -286,7 +272,7 @@ public abstract class Module
 			
 		}
 
-		public String replaceAllWithNTimes(String input) //This method replaces the regular expression "'x' <repeats n times>" with n repetitions of character x
+		private String replaceAllWithNTimes(String input) //This method replaces the regular expression "'x' <repeats n times>" with n repetitions of character x
 		{
 			int numOfRepeats = -1;
 			Hashtable<String, StringBuffer> theTable = new Hashtable<String, StringBuffer>();
@@ -329,7 +315,7 @@ public abstract class Module
 			return input;
 		}
 		
-		public String clearNewLines(String input) //This method is only to be envoked if there are no memory addresses in the SQL
+		private String clearNewLines(String input) //This method is only to be envoked if there are no memory addresses in the SQL
 		{
 			input = input.replaceAll("([\n]?)[ ]?(.{70,}?)\n[ ]?(?=\\S)","$1$2");
 			return input;
