@@ -84,7 +84,7 @@ public abstract class Module
 	{
 		protected void replace(String input)
 		{
-			listOfDefaultReplaceables.add(new Replaceable(("[ ]+[\\s\r\n$]"),"\n"));
+			listOfDefaultReplaceables.add(new Replaceable(("[ ]+[\r\n$]"),"\n"));
 		}
 		
 	};
@@ -94,6 +94,7 @@ public abstract class Module
 		protected void replace(String input)
 		{
 			listOfDefaultReplaceables.add(new Replaceable().setMethod(s -> processFiler(s)));
+			listOfDefaultReplaceables.add(new Replaceable(("[ ]+[\r\n$]"),"\n"));
 		}
 		
 		private String processFiler(String input)

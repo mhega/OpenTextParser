@@ -9,11 +9,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.6
+	 * Text Parser V 2.7
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.6";
+	private String version = "2.7";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -196,6 +196,7 @@ public class TextParser extends JFrame
 		
 		AppLogger.getLogger("TextParser", null, null, AppLogger.ONELINEFORMATTER);
 		AppLogger.setTextArea(consoleArea);
+		AppLogger.getLogger().info(AppLogger.LOGOBANNERTEXTPARSER);
 
 
 		txt.setEditable(false);
@@ -289,9 +290,21 @@ public class TextParser extends JFrame
 		contentPane.add(scrollPane, BorderLayout.CENTER);
 		
 		ModuleRegistrant reg = new ModuleRegistrant(mnModules,  moduleButtonGroup);
-		reg.registerModule(false, Module.SQLCLEANER, "SQLCleaner", "Please use CTRL+V to paste SQL text..", "Cleans SQL extracted from Teradata Database dumps");
-		reg.registerModule(false, Module.CENTRIFYCLEANER, "CentrifyTextParser", "Please use CTRL+V to paste CENTRIFY text...", "Cleans Text extracted from Centrify connections");
-		reg.registerModule(true, Module.FILERTBLHDR, "FilerTableHeader", "Please use CTRL+V to paste Filer text...", "Extracts table information from Table Headers");
+		reg.registerModule(false
+				, Module.SQLCLEANER
+				, "SQLCleaner"
+				, "Please use CTRL+V or Edit menu to paste SQL text.."
+				, "Cleans SQL extracted from Teradata Database dumps");
+		reg.registerModule(false
+				, Module.CENTRIFYCLEANER
+				, "CentrifyTextCleaner"
+				, "Please use CTRL+V or Edit menu to paste CENTRIFY text..."
+				, "Cleans Text extracted from Centrify connections");
+		reg.registerModule(true
+				, Module.FILERTBLHDR
+				, "FilerTableHeader"
+				, "Please use CTRL+V or Edit menu to paste Filer Table Header text..."
+				, "Extracts table information from Table Headers");
 
 		
 	}

@@ -142,16 +142,14 @@ public class AppLogger /*extends Logger*/ {
 	private static Logger dummy = null; /*Used for avoiding NullPointerException as a result of returning null Logger to the caller*/  
 
 	private static final String LOGOBANNER = "\n"+
-			"                      __________\n"+
-			"                     /___   ___/\n"+
-			"                         | | _______  _____             _____         ________       \n"+
-			"                         | ||  ____/ |  __ \\     /\\    |  __ \\    /\\ /__   __/ /\\    \n"+
-			"                         | || |___   | |__) |   /  \\   | |  | |  /  \\   | |   /  \\   \n"+
-			"                         | ||  __/   | |\\  /   / /\\ \\  | |  | | / /\\ \\  | |  / /\\ \\  \n"+
-			"                         | || |______| | \\ \\  / __\\\\ \\ | |__| |/ __\\\\ \\ | | / __\\\\ \\ \n"+
-			"                         | ||__________|  \\_\\/_/    \\_\\|_____//_/    \\_\\|_|/_/    \\_\\\n"+
-			"                         |_|                                                         \n";
-	public static final String LOGOBANNERTEXTPARSER = LOGOBANNER+"                                             Text Parser\n\n";
+			"  _                               _           _\n"+
+			" | |                             | |         | |\n"+
+			" | |_    ___   _ __    __ _    __| |   __ _  | |_    __ _\n"+
+			" | __|  / _ \\ | '__|  / _` |  / _` |  / _` | | __|  / _` |\n"+
+			" | |_  |  __/ | |    | (_| | | (_| | | (_| | | |_  | (_| |  _\n"+
+			"  \\__|  \\___| |_|     \\__,_|  \\__,_|  \\__,_|  \\__|  \\__,_| (_)\n";
+
+	public static final String LOGOBANNERTEXTPARSER = LOGOBANNER+"\n                      Text Parser\n\n";
 	
 	public static final Level DISPLAY = new Level("DISPLAY",1800)
 	{
