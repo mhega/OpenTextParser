@@ -4,30 +4,67 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.*;
 import java.io.*;
+import java.util.Hashtable;
 import java.util.logging.Level;
 
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.7
+	 * Text Parser V 2.8
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.7";
+	private String version = "2.8";
 	private class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
 		private ButtonGroup moduleButtonGroup;
+		private Hashtable<String, JMenu> menus;
 		
 		public ModuleRegistrant(JMenu modulesMenu , ButtonGroup moduleButtonGroup)
 		{
+			menus = new Hashtable<String, JMenu>();
 			this.modulesMenu = modulesMenu;
+			menus.put(modulesMenu.getText(), modulesMenu);
 			this.moduleButtonGroup = moduleButtonGroup;
 		}
+		
+		public void addSubmenu(String submenuName)
+		{
+			addSubmenu(submenuName, modulesMenu.getText());
+		}
+		public void addSubmenu(String submenuName, String parentMenuName)
+		{
+			JMenu parentMenuObject = menus.get(parentMenuName);
+			if(parentMenuObject == null)
+			{
+				throw new TextParserException("INTERNAL : Attempting to add a submenu with a non-existing parent menu name..");
+			}
+			else if(menus.get(submenuName) != null)
+			{
+				throw new TextParserException("INTERNAL : Attempting to add a submenu with a name that already exists..");
+			}
+			else
+			{
+				JMenu submenuObject = new JMenu(submenuName);
+				parentMenuObject.add(submenuObject);
+				menus.put(submenuName, submenuObject);
+			}
+		}
+		
 		public void registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
 		{
+			registerModule(modulesMenu.getText(), isDefaultModule, module, moduleName, promptText, aboutText);
+		}
+		public void registerModule(String submenuName, boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
+		{
+			JMenu submenuObject = menus.get(submenuName);
+			if(submenuObject ==null)
+			{
+				throw new TextParserException("INTERNAL : Attempting to register a module with a non-existing submenu name..");
+			}
 			JRadioButtonMenuItem radioButtonMenuItem = new JRadioButtonMenuItem(moduleName);
-			modulesMenu.add(radioButtonMenuItem);
+			submenuObject.add(radioButtonMenuItem);
 			moduleButtonGroup.add(radioButtonMenuItem);			
 			
 
@@ -290,17 +327,24 @@ public class TextParser extends JFrame
 		contentPane.add(scrollPane, BorderLayout.CENTER);
 		
 		ModuleRegistrant reg = new ModuleRegistrant(mnModules,  moduleButtonGroup);
-		reg.registerModule(false
+		//reg.addSubmenu("General");
+		//reg.addSubmenu("DBS");
+		//reg.addSubmenu("SQL","DBS");
+		//reg.addSubmenu("File System", "DBS");
+		reg.registerModule(//"SQL",
+				false
 				, Module.SQLCLEANER
 				, "SQLCleaner"
 				, "Please use CTRL+V or Edit menu to paste SQL text.."
 				, "Cleans SQL extracted from Teradata Database dumps");
-		reg.registerModule(false
+		reg.registerModule(//"General",
+				false
 				, Module.CENTRIFYCLEANER
 				, "CentrifyTextCleaner"
 				, "Please use CTRL+V or Edit menu to paste CENTRIFY text..."
-				, "Cleans Text extracted from Centrify connections");
-		reg.registerModule(true
+				, "Cleans Text extracted from Centrify connections");		
+		reg.registerModule(//"File System",
+				true
 				, Module.FILERTBLHDR
 				, "FilerTableHeader"
 				, "Please use CTRL+V or Edit menu to paste Filer Table Header text..."
