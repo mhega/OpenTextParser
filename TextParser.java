@@ -10,20 +10,22 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 2.8
+	 * Text Parser V 3.0
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "2.8";
-	private class ModuleRegistrant
+	private String version = "3.0";
+	public class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
 		private ButtonGroup moduleButtonGroup;
 		private Hashtable<String, JMenu> menus;
+		private Hashtable<JMenu, JMenu> parents;
 		
 		public ModuleRegistrant(JMenu modulesMenu , ButtonGroup moduleButtonGroup)
 		{
 			menus = new Hashtable<String, JMenu>();
+			parents = new Hashtable<JMenu, JMenu>();
 			this.modulesMenu = modulesMenu;
 			menus.put(modulesMenu.getText(), modulesMenu);
 			this.moduleButtonGroup = moduleButtonGroup;
@@ -49,7 +51,17 @@ public class TextParser extends JFrame
 				JMenu submenuObject = new JMenu(submenuName);
 				parentMenuObject.add(submenuObject);
 				menus.put(submenuName, submenuObject);
+				parents.put(submenuObject, parentMenuObject);
 			}
+		}
+		
+		private String getParentComponentName(JMenu leaf)
+		{
+			JMenu parent = parents.get((JMenu)leaf);
+			if(parent == null)
+				return "";
+					
+			return getParentComponentName(parent) +" - "+ leaf.getText();
 		}
 		
 		public void registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
@@ -74,7 +86,7 @@ public class TextParser extends JFrame
 				{
 					AppLogger.getLogger().info("Switching to "+moduleName);
 					TextParser.this.replacerModule = module;
-					TextParser.this.setTitle(TextParser.this.title+" - "+ moduleName);
+					TextParser.this.setTitle(TextParser.this.title+ getParentComponentName(submenuObject) +" - "+ moduleName);
 					if (!"".equals(promptText))
 						txt.setText(promptText);
 					String crossModuleText = "Selected Module: "+moduleName+"<br>";
@@ -327,28 +339,7 @@ public class TextParser extends JFrame
 		contentPane.add(scrollPane, BorderLayout.CENTER);
 		
 		ModuleRegistrant reg = new ModuleRegistrant(mnModules,  moduleButtonGroup);
-		//reg.addSubmenu("General");
-		//reg.addSubmenu("DBS");
-		//reg.addSubmenu("SQL","DBS");
-		//reg.addSubmenu("File System", "DBS");
-		reg.registerModule(//"SQL",
-				false
-				, Module.SQLCLEANER
-				, "SQLCleaner"
-				, "Please use CTRL+V or Edit menu to paste SQL text.."
-				, "Cleans SQL extracted from Teradata Database dumps");
-		reg.registerModule(//"General",
-				false
-				, Module.CENTRIFYCLEANER
-				, "CentrifyTextCleaner"
-				, "Please use CTRL+V or Edit menu to paste CENTRIFY text..."
-				, "Cleans Text extracted from Centrify connections");		
-		reg.registerModule(//"File System",
-				true
-				, Module.FILERTBLHDR
-				, "FilerTableHeader"
-				, "Please use CTRL+V or Edit menu to paste Filer Table Header text..."
-				, "Extracts table information from Table Headers");
+		ModuleFactory.register(reg);
 
 		
 	}
