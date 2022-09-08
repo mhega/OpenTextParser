@@ -10,11 +10,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.1
+	 * Text Parser V 3.2
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.1";
+	private String version = "3.2";
 	public class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -273,14 +273,18 @@ public class TextParser extends JFrame
 					if (ke.getKeyCode() == KeyEvent.VK_V && ke.isControlDown())
 					{
 						clipBoardContents = TextParser.this.getClipboard();
+						
 						if (clipBoardContents ==null)
 							JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 						else
-							if(replacerModule.isPromptDisplayEnabled())
+						{
+							Module.DataObjectTable dataObjectTable = null;
+							if(!replacerModule.isPromptDisplayEnabled()
+									|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
 							{
-								replacerModule.display(TextParser.this);
+								TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents, dataObjectTable));
 							}
-							TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
+						}
 					}
 				}
 				catch(Exception e)
@@ -328,11 +332,14 @@ public class TextParser extends JFrame
 					if (clipBoardContents ==null)
 						JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 					else
-						if(replacerModule.isPromptDisplayEnabled())
+					{
+						Module.DataObjectTable dataObjectTable = null;
+						if(!replacerModule.isPromptDisplayEnabled()
+								|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
 						{
-							replacerModule.display(TextParser.this);
+							TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents, dataObjectTable));
 						}
-						TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
+					}
 				}
 				catch(Exception e)
 				{

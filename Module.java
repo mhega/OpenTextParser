@@ -15,7 +15,6 @@ public abstract class Module implements Cloneable
 	public Object clone() throws CloneNotSupportedException
 	{
 		Module o = (Module)super.clone();
-		o.dataObjectTable = (Hashtable<String,Object>)(this.dataObjectTable.clone());
 		o.displayMethod = this.displayMethod;
 		o.listOfDefaultReplaceables = (ArrayList<Replaceable>)(this.listOfDefaultReplaceables);
 		o.cloned = true;
@@ -23,7 +22,7 @@ public abstract class Module implements Cloneable
 	}
 	interface Displayable
 	{
-		public void display(Module module, java.awt.Component parent);
+		public DataObjectTable display(Module module, java.awt.Component parent);
 	}
 	private Displayable displayMethod = null;
 	public boolean isPromptDisplayEnabled()
@@ -34,35 +33,38 @@ public abstract class Module implements Cloneable
 			return true;
 	}
 	
-	private Hashtable<String, Object> dataObjectTable = new Hashtable<String, Object>();
-	public void setDataObject(String name, Object data)
+	public DataObjectTable getNewDataObjectTable()
 	{
-		protect();
-		dataObjectTable.put(name, data);
+		return new DataObjectTable();
+	}
+	public class DataObjectTable extends Hashtable<String, Object>
+	{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 5524123527653934470L;
+
+		private DataObjectTable()
+		{
+			super();
+		}
 	}
 	
-	private void deleteDataObjects()
-	{
-		dataObjectTable.clear();
-	}
-	
-	public Object getDataObject(String name)
-	{
-		return dataObjectTable.get(name);
-	}
 	protected ArrayList<Replaceable> listOfDefaultReplaceables;
 	
-	protected abstract void replace(String input);
+	protected abstract void replace(String input, DataObjectTable dataObjectTable);
 	
 	public void setPromptDisplayMethod(Displayable  d)
 	{
 		protect();
 		this.displayMethod = d;
 	}
-	public void display(java.awt.Component parent)
+	public DataObjectTable display(java.awt.Component parent)
 	{
-		//if(this.isPromptDisplayEnabled())
-		this.displayMethod.display(this, parent);
+		if(this.isPromptDisplayEnabled())
+			return this.displayMethod.display(this, parent);
+		else
+			throw new TextParserException("INTERNAL: Attempt to invoke Display Method on a Module with no previous registration of a Display Method.");
 	}
 
 	
@@ -73,10 +75,10 @@ public abstract class Module implements Cloneable
 		return output;
 	}
 	
-	public String runReplacements(String input) throws Exception
+	public String runReplacements(String input, DataObjectTable dataObjectTable) throws Exception
 	{
 		listOfDefaultReplaceables  = new ArrayList<Replaceable>();
-		replace(input);
+		replace(input, dataObjectTable);
 		Replaceable[] replaceables = listOfDefaultReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
 		{
@@ -90,7 +92,6 @@ public abstract class Module implements Cloneable
 			}
 		}
 		
-		this.deleteDataObjects();
 		return input;
 	}
 	
