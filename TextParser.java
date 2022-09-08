@@ -10,11 +10,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.0
+	 * Text Parser V 3.1
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.0";
+	private String version = "3.1";
 	public class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -64,12 +64,22 @@ public class TextParser extends JFrame
 			return getParentComponentName(parent) +" - "+ leaf.getText();
 		}
 		
-		public void registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
+		public Module registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
 		{
-			registerModule(modulesMenu.getText(), isDefaultModule, module, moduleName, promptText, aboutText);
+			return registerModule(modulesMenu.getText(), isDefaultModule, module, moduleName, promptText, aboutText);
 		}
-		public void registerModule(String submenuName, boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
+		public Module registerModule(String submenuName, boolean isDefaultModule, Module originalModule, String moduleName, String promptText, String aboutText)
 		{
+			Module module;
+			try
+			{
+				module = (Module)(originalModule.clone());
+			}
+			catch(CloneNotSupportedException e)
+			{
+				throw new TextParserException("Internal Error..");
+			}
+			
 			JMenu submenuObject = menus.get(submenuName);
 			if(submenuObject ==null)
 			{
@@ -100,6 +110,7 @@ public class TextParser extends JFrame
 				radioButtonMenuItem.doClick();
 				TextParser.this.replacerModule = module;
 			}
+			return module;
 		}
 	}
 	public static void main(String args[])
@@ -265,6 +276,10 @@ public class TextParser extends JFrame
 						if (clipBoardContents ==null)
 							JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 						else
+							if(replacerModule.isPromptDisplayEnabled())
+							{
+								replacerModule.display(TextParser.this);
+							}
 							TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
 					}
 				}
@@ -313,6 +328,10 @@ public class TextParser extends JFrame
 					if (clipBoardContents ==null)
 						JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 					else
+						if(replacerModule.isPromptDisplayEnabled())
+						{
+							replacerModule.display(TextParser.this);
+						}
 						TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
 				}
 				catch(Exception e)
