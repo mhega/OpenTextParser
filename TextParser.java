@@ -10,11 +10,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.6
+	 * Text Parser V 3.7
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.6";
+	private String version = "3.7";
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
  	{
