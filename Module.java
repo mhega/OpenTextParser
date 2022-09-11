@@ -7,6 +7,21 @@ public abstract class Module implements Cloneable
 	private boolean cloned = false;
 	private void protect()
 	{
+		/*
+		 * This is to protect the predefined reusable modules
+		 *  from inadvertent changes to their states by ModuleFactory developers.
+		 *  The intent is to always keep the predefined modules unchanged
+		 *  , so they will be safely shared or subsequently reused
+		 *  , while TextParser.ModuleRegistrant class will perform a deep-clone of the Module object
+		 *   during every module registration.
+		 *   The deep-cloned copy of the Module can then be successfully changed
+		 *   without throwing the following exception.
+		 *  
+		 *  List of methods that are protected against changes to un-cloned class instances:
+		 *   1. setPromptDisplayMethod
+		 *  
+		 *  It is preferred to keep the Module class design at the least possible modifiability.
+		 * */
 		if(!cloned)
 		{
 			throw new TextParserException("INTERNAL: Attempting to modify a protected Module instance");
@@ -22,6 +37,10 @@ public abstract class Module implements Cloneable
 	}
 	interface Displayable
 	{
+		/*
+		 * Both Module and JFrame (Component) are passed to display method
+		 * , since it controls both GUI and module logic.
+		 * */
 		public DataObjectTable display(Module module, java.awt.Component parent);
 	}
 	private Displayable displayMethod = null;
@@ -39,8 +58,9 @@ public abstract class Module implements Cloneable
 	}
 	public class DataObjectTable extends Hashtable<String, Object>
 	{
-		/**
-		 * 
+		/*
+		 * Although this class is no more than a Hashtable
+		 * , it is created for loose-coupled interaction with interfacing classes. 
 		 */
 		private static final long serialVersionUID = 5524123527653934470L;
 
@@ -50,7 +70,13 @@ public abstract class Module implements Cloneable
 		}
 	}
 	
-	protected ArrayList<Replaceable> listOfDefaultReplaceables;
+	private ArrayList<Replaceable> listOfDefaultReplaceables;
+	
+	protected Replaceable addReplaceable(Replaceable replaceable)
+	{
+		listOfDefaultReplaceables.add(replaceable);
+		return replaceable;
+	}
 	
 	protected abstract void replace(String input, DataObjectTable dataObjectTable);
 	

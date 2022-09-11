@@ -10,11 +10,15 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.7
+	 * Text Parser V 3.8
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.7";
+	private String version = "3.8";
+	private static String getRelease()
+	{
+		return ModuleFactory.getRelease();
+	}
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
  	{
@@ -55,6 +59,7 @@ public class TextParser extends JFrame
 		{
 			try
 			{
+				// Feature is enabled by default.
 				return moduleSettings.get(module).getOrDefault(AUTOSCROLLDOWN, ENABLED) == ENABLED;
 			}
 			catch(Exception e)
@@ -292,7 +297,7 @@ public class TextParser extends JFrame
  	
 	public void assemble()
 	{	
-		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;"+version+"<br>"+
+		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;V "+version+" R "+TextParser.getRelease()+"<br>"+
 				"Performs text cleanup / transformation according to the selected module.<br><br>";
 		aboutTextFooter = "<br>Created by Mohamed Hegazy</div></html>";
 		aboutDialog = new JDialog(this,"Text Parser");
