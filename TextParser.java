@@ -10,11 +10,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.8
+	 * Text Parser V 3.9
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.8";
+	private String version = "3.9";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -116,6 +116,8 @@ public class TextParser extends JFrame
 		
 		private String getParentComponentName(JMenu leaf)
 		{
+			/*
+			 * Retrieves chain of submenu names for title display*/
 			JMenu parent = parents.get((JMenu)leaf);
 			if(parent == null)
 				return "";
@@ -241,7 +243,10 @@ public class TextParser extends JFrame
  				if(!replacerModule.isPromptDisplayEnabled()
  						|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
  				{
- 					this.txt.setText(replacerModule.runReplacements(clipBoardContents, dataObjectTable));
+ 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
+ 					 *  from carrying over to subsequent executions (replacements)*/
+ 					this.txt.setText(((Module)(replacerModule.clone())).runReplacements(clipBoardContents, dataObjectTable));
+ 					//AutoScrollDown defaults to Enabled
  					int caretPosition = TextParser.this.txt.getDocument().getLength();
  					if(!Settings.isAutoScrollDownEnabled(replacerModule))
  						caretPosition = 0;

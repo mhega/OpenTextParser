@@ -8,12 +8,12 @@ public abstract class Module implements Cloneable
 	private void protect()
 	{
 		/*
-		 * This is to protect the predefined reusable modules
+		 * This is to protect the predefined reusable modules in ModuleFactory
 		 *  from inadvertent changes to their states by ModuleFactory developers.
-		 *  The intent is to always keep the predefined modules unchanged
-		 *  , so they will be safely shared or subsequently reused
+		 *  The intent is to always keep the predefined modules unchanged (as templates)
+		 *  , so they will be safely shared (optionally registered multiple times to different menu items)
 		 *  , while TextParser.ModuleRegistrant class will perform a deep-clone of the Module object
-		 *   during every module registration.
+		 *   during every module registration and prior to every replacement cycle.
 		 *   The deep-cloned copy of the Module can then be successfully changed
 		 *   without throwing the following exception.
 		 *  
@@ -21,6 +21,14 @@ public abstract class Module implements Cloneable
 		 *   1. setPromptDisplayMethod
 		 *  
 		 *  It is preferred to keep the Module class design at the least possible modifiability.
+		 *  
+		 *  It is also important to note that since the Module is cloned on-the-fly before every replacement cycle
+		 *  , any Module instance variables that are defined within ModuleFactory or TextParser classes will not carry over to the clone copy.
+		 *  This was done to safeguard the module by preventing instance variables that are created by ModuleFactory developer 
+		 *  from carrying over to subsequent executions (replacements)
+		 *  
+		 *  Any new instance variables that need to be survive through cloning should be copied within the clone method.
+		 *  
 		 * */
 		if(!cloned)
 		{
@@ -31,7 +39,7 @@ public abstract class Module implements Cloneable
 	{
 		Module o = (Module)super.clone();
 		o.displayMethod = this.displayMethod;
-		o.listOfDefaultReplaceables = (ArrayList<Replaceable>)(this.listOfDefaultReplaceables);
+		o.listOfReplaceables = (ArrayList<Replaceable>)(this.listOfReplaceables);
 		o.cloned = true;
 		return o;
 	}
@@ -70,11 +78,11 @@ public abstract class Module implements Cloneable
 		}
 	}
 	
-	private ArrayList<Replaceable> listOfDefaultReplaceables;
+	private ArrayList<Replaceable> listOfReplaceables;
 	
 	protected Replaceable addReplaceable(Replaceable replaceable)
 	{
-		listOfDefaultReplaceables.add(replaceable);
+		listOfReplaceables.add(replaceable);
 		return replaceable;
 	}
 	
@@ -103,9 +111,10 @@ public abstract class Module implements Cloneable
 	
 	public String runReplacements(String input, DataObjectTable dataObjectTable) throws Exception
 	{
-		listOfDefaultReplaceables  = new ArrayList<Replaceable>();
+		protect();
+		listOfReplaceables  = new ArrayList<Replaceable>();
 		replace(input, dataObjectTable);
-		Replaceable[] replaceables = listOfDefaultReplaceables.toArray(new Replaceable[0]);
+		Replaceable[] replaceables = listOfReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
 		{
 			if(replaceables[i].replaceViaCallMethod())
