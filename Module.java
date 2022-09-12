@@ -1,12 +1,105 @@
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.function.Function;
 
-public abstract class Module
-{	
+public abstract class Module implements Cloneable
+{
+	private boolean cloned = false;
+	private void protect()
+	{
+		/*
+		 * This is to protect the predefined reusable modules in ModuleFactory
+		 *  from inadvertent changes to their states by ModuleFactory developers.
+		 *  The intent is to always keep the predefined modules unchanged (as templates)
+		 *  , so they will be safely shared (optionally registered multiple times to different menu items)
+		 *  , while TextParser.ModuleRegistrant class will perform a deep-clone of the Module object
+		 *   during every module registration and prior to every replacement cycle.
+		 *   The deep-cloned copy of the Module can then be successfully changed
+		 *   without throwing the following exception.
+		 *  
+		 *  List of methods that are protected against changes to un-cloned class instances:
+		 *   1. setPromptDisplayMethod
+		 *  
+		 *  It is preferred to keep the Module class design at the least possible modifiability.
+		 *  
+		 *  It is also important to note that since the Module is cloned on-the-fly before every replacement cycle
+		 *  , any Module instance variables that are defined within ModuleFactory or TextParser classes will not carry over to the clone copy.
+		 *  This was done to safeguard the module by preventing instance variables that are created by ModuleFactory developer 
+		 *  from carrying over to subsequent executions (replacements)
+		 *  
+		 *  Any new instance variables that need to be survive through cloning should be copied within the clone method.
+		 *  
+		 * */
+		if(!cloned)
+		{
+			throw new TextParserException("INTERNAL: Attempting to modify a protected Module instance");
+		}
+	}
+	public Object clone() throws CloneNotSupportedException
+	{
+		Module o = (Module)super.clone();
+		o.displayMethod = this.displayMethod;
+		o.listOfReplaceables = (ArrayList<Replaceable>)(this.listOfReplaceables);
+		o.cloned = true;
+		return o;
+	}
+	interface Displayable
+	{
+		/*
+		 * Both Module and JFrame (Component) are passed to display method
+		 * , since it controls both GUI and module logic.
+		 * */
+		public DataObjectTable display(Module module, java.awt.Component parent);
+	}
+	private Displayable displayMethod = null;
+	public boolean isPromptDisplayEnabled()
+	{
+		if(displayMethod == null)
+			return false;
+		else
+			return true;
+	}
 	
-	protected ArrayList<Replaceable> listOfDefaultReplaceables;
+	public DataObjectTable getNewDataObjectTable()
+	{
+		return new DataObjectTable();
+	}
+	public class DataObjectTable extends Hashtable<String, Object>
+	{
+		/*
+		 * Although this class is no more than a Hashtable
+		 * , it is created for loose-coupled interaction with interfacing classes. 
+		 */
+		private static final long serialVersionUID = 5524123527653934470L;
+
+		private DataObjectTable()
+		{
+			super();
+		}
+	}
 	
-	protected abstract void replace(String input);
+	private ArrayList<Replaceable> listOfReplaceables;
+	
+	protected Replaceable addReplaceable(Replaceable replaceable)
+	{
+		listOfReplaceables.add(replaceable);
+		return replaceable;
+	}
+	
+	protected abstract void replace(String input, DataObjectTable dataObjectTable);
+	
+	public void setPromptDisplayMethod(Displayable  d)
+	{
+		protect();
+		this.displayMethod = d;
+	}
+	public DataObjectTable display(java.awt.Component parent)
+	{
+		if(this.isPromptDisplayEnabled())
+			return this.displayMethod.display(this, parent);
+		else
+			throw new TextParserException("INTERNAL: Attempt to invoke Display Method on a Module with no previous registration of a Display Method.");
+	}
 
 	
 	protected String callMethod(Function<String,String> method, String input) throws Exception
@@ -16,11 +109,12 @@ public abstract class Module
 		return output;
 	}
 	
-	public String runReplacements(String input) throws Exception
+	public String runReplacements(String input, DataObjectTable dataObjectTable) throws Exception
 	{
-		listOfDefaultReplaceables  = new ArrayList<Replaceable>();
-		replace(input);
-		Replaceable[] replaceables = listOfDefaultReplaceables.toArray(new Replaceable[0]);
+		protect();
+		listOfReplaceables  = new ArrayList<Replaceable>();
+		replace(input, dataObjectTable);
+		Replaceable[] replaceables = listOfReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
 		{
 			if(replaceables[i].replaceViaCallMethod())
@@ -32,7 +126,7 @@ public abstract class Module
 				input = input.replaceAll(replaceables[i].regex, replaceables[i].replacement);	
 			}
 		}
-
+		
 		return input;
 	}
 	

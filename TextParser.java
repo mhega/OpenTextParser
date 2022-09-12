@@ -10,11 +10,65 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.0
+	 * Text Parser V 3.9
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.0";
+	private String version = "3.9";
+	private static String getRelease()
+	{
+		return ModuleFactory.getRelease();
+	}
+	
+ 	private static void processException(Exception e, Level level, boolean popup, Component parent)
+ 	{
+ 		AppLogger.getLogger().log(level, "An Unexpected Exception Occurred", e);
+		if(popup)
+		{
+			if(e instanceof TextParserException)
+				JOptionPane.showMessageDialog(parent,"Error Occurred! \""+e.getMessage()+"\". Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+			else
+				JOptionPane.showMessageDialog(parent,"Exception Occurred! Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+		}
+ 	}
+	
+	private static class Settings
+	{
+		public static final Integer DISABLED = Integer.valueOf(0);
+		public static final Integer ENABLED = Integer.valueOf(1);
+		private static final String AUTOSCROLLDOWN = "AUTOSCROLLDOWN";
+		private static Hashtable<Module, Hashtable<String, Integer> > moduleSettings = new Hashtable<Module, Hashtable<String, Integer> >();
+		
+		public static void addModule(Module module)
+		{
+			moduleSettings.put(module, new Hashtable<String,Integer>());
+		}
+		public static boolean disableAutoScrollDown(Module module)
+		{
+			try
+			{
+				moduleSettings.get(module).put(AUTOSCROLLDOWN, DISABLED);
+				return true;
+			}
+			catch(Exception e)
+			{
+				return false;
+			}
+		}
+		public static boolean isAutoScrollDownEnabled(Module module)
+		{
+			try
+			{
+				// Feature is enabled by default.
+				return moduleSettings.get(module).getOrDefault(AUTOSCROLLDOWN, ENABLED) == ENABLED;
+			}
+			catch(Exception e)
+			{
+				TextParser.processException(e, Level.WARNING, false, null);
+				return true;
+			}
+		}
+	}
 	public class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -29,6 +83,11 @@ public class TextParser extends JFrame
 			this.modulesMenu = modulesMenu;
 			menus.put(modulesMenu.getText(), modulesMenu);
 			this.moduleButtonGroup = moduleButtonGroup;
+		}
+		
+		public void disableAutoScrollDown(Module module)
+		{
+			Settings.disableAutoScrollDown(module);
 		}
 		
 		public void addSubmenu(String submenuName)
@@ -57,6 +116,8 @@ public class TextParser extends JFrame
 		
 		private String getParentComponentName(JMenu leaf)
 		{
+			/*
+			 * Retrieves chain of submenu names for title display*/
 			JMenu parent = parents.get((JMenu)leaf);
 			if(parent == null)
 				return "";
@@ -64,12 +125,22 @@ public class TextParser extends JFrame
 			return getParentComponentName(parent) +" - "+ leaf.getText();
 		}
 		
-		public void registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
+		public Module registerModule(boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
 		{
-			registerModule(modulesMenu.getText(), isDefaultModule, module, moduleName, promptText, aboutText);
+			return registerModule(modulesMenu.getText(), isDefaultModule, module, moduleName, promptText, aboutText);
 		}
-		public void registerModule(String submenuName, boolean isDefaultModule, Module module, String moduleName, String promptText, String aboutText)
+		public Module registerModule(String submenuName, boolean isDefaultModule, Module originalModule, String moduleName, String promptText, String aboutText)
 		{
+			Module module;
+			try
+			{
+				module = (Module)(originalModule.clone());
+			}
+			catch(CloneNotSupportedException e)
+			{
+				throw new TextParserException("Internal Error..");
+			}
+			
 			JMenu submenuObject = menus.get(submenuName);
 			if(submenuObject ==null)
 			{
@@ -78,7 +149,7 @@ public class TextParser extends JFrame
 			JRadioButtonMenuItem radioButtonMenuItem = new JRadioButtonMenuItem(moduleName);
 			submenuObject.add(radioButtonMenuItem);
 			moduleButtonGroup.add(radioButtonMenuItem);			
-			
+			Settings.addModule(module);
 
 			radioButtonMenuItem.addActionListener(new ActionListener()
 			{
@@ -100,6 +171,7 @@ public class TextParser extends JFrame
 				radioButtonMenuItem.doClick();
 				TextParser.this.replacerModule = module;
 			}
+			return module;
 		}
 	}
 	public static void main(String args[])
@@ -137,6 +209,7 @@ public class TextParser extends JFrame
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
 	private Module replacerModule;
 	private ConsoleDialog consoleDialog;
+	
 
  	private String getClipboard()
 	{
@@ -157,13 +230,35 @@ public class TextParser extends JFrame
     		return null;
 	}
  	
- 	private void processException(Exception e)
+ 	private void executeReplacementProcess()
  	{
- 		AppLogger.getLogger().log(Level.SEVERE, "An Unexpected Exception Occurred", e);
-		if(e instanceof TextParserException)
-			JOptionPane.showMessageDialog(TextParser.this,"Error Occurred! \""+e.getMessage()+"\". Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
-		else
-			JOptionPane.showMessageDialog(TextParser.this,"Exception Occurred! Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+ 		String clipBoardContents = TextParser.this.getClipboard();
+ 		try
+ 		{
+ 			if (clipBoardContents ==null)
+ 				JOptionPane.showMessageDialog(this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
+ 			else
+ 			{
+ 				Module.DataObjectTable dataObjectTable = null;
+ 				if(!replacerModule.isPromptDisplayEnabled()
+ 						|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
+ 				{
+ 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
+ 					 *  from carrying over to subsequent executions (replacements)*/
+ 					this.txt.setText(((Module)(replacerModule.clone())).runReplacements(clipBoardContents, dataObjectTable));
+ 					//AutoScrollDown defaults to Enabled
+ 					int caretPosition = TextParser.this.txt.getDocument().getLength();
+ 					if(!Settings.isAutoScrollDownEnabled(replacerModule))
+ 						caretPosition = 0;
+
+ 					TextParser.this.txt.setCaretPosition(caretPosition);
+ 				}
+ 			}
+ 		}
+ 		catch(Exception e)
+ 		{
+ 			TextParser.processException(e, Level.SEVERE, true, TextParser.this);
+ 		}
  	}
  	private class ConsoleDialog extends JDialog {
  		
@@ -207,7 +302,7 @@ public class TextParser extends JFrame
  	
 	public void assemble()
 	{	
-		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;"+version+"<br>"+
+		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;V "+version+" R "+TextParser.getRelease()+"<br>"+
 				"Performs text cleanup / transformation according to the selected module.<br><br>";
 		aboutTextFooter = "<br>Created by Mohamed Hegazy</div></html>";
 		aboutDialog = new JDialog(this,"Text Parser");
@@ -256,21 +351,9 @@ public class TextParser extends JFrame
 		{
 			public void keyPressed(KeyEvent ke)
 			{
-				String clipBoardContents;
-				try
-				{
-					if (ke.getKeyCode() == KeyEvent.VK_V && ke.isControlDown())
-					{
-						clipBoardContents = TextParser.this.getClipboard();
-						if (clipBoardContents ==null)
-							JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
-						else
-							TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
-					}
-				}
-				catch(Exception e)
-				{
-					processException(e);
+				if (ke.getKeyCode() == KeyEvent.VK_V && ke.isControlDown())
+				{				
+					TextParser.this.executeReplacementProcess();
 				}
 			}
 		});
@@ -307,18 +390,7 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
-				String clipBoardContents = TextParser.this.getClipboard();
-				try
-				{
-					if (clipBoardContents ==null)
-						JOptionPane.showMessageDialog(TextParser.this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
-					else
-						TextParser.this.txt.setText(replacerModule.runReplacements(clipBoardContents));
-				}
-				catch(Exception e)
-				{
-					processException(e);
-				}
+				TextParser.this.executeReplacementProcess();
 			}
 		});
 		
