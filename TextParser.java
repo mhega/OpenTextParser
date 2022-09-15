@@ -4,71 +4,102 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.*;
 import java.io.*;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Optional;
 import java.util.logging.Level;
 
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 3.9
+	 * Text Parser V 4.0
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "3.9";
+	private String version = "4.0";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
 	}
 	
- 	private static void processException(Exception e, Level level, boolean popup, Component parent)
- 	{
- 		AppLogger.getLogger().log(level, "An Unexpected Exception Occurred", e);
-		if(popup)
+	private static class Setting
+	{		
+		public static enum SettingValue
 		{
-			if(e instanceof TextParserException)
-				JOptionPane.showMessageDialog(parent,"Error Occurred! \""+e.getMessage()+"\". Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
-			else
-				JOptionPane.showMessageDialog(parent,"Exception Occurred! Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+			ENABLED, DISABLED;
 		}
- 	}
-	
-	private static class Settings
-	{
-		public static final Integer DISABLED = Integer.valueOf(0);
-		public static final Integer ENABLED = Integer.valueOf(1);
-		private static final String AUTOSCROLLDOWN = "AUTOSCROLLDOWN";
-		private static Hashtable<Module, Hashtable<String, Integer> > moduleSettings = new Hashtable<Module, Hashtable<String, Integer> >();
+		public static final SettingValue DISABLED = SettingValue.DISABLED;
+		public static final SettingValue ENABLED = SettingValue.ENABLED;
+		public static final Setting AUTOSCROLLDOWN = new Setting(ENABLED, DISABLED);
+		private static Hashtable<Module, Hashtable<Setting, SettingValue> > moduleSettings;
 		
-		public static void addModule(Module module)
+		public final SettingValue[] validValues;
+		private Setting(Setting.SettingValue... validValues)
 		{
-			moduleSettings.put(module, new Hashtable<String,Integer>());
+			moduleSettings = new Hashtable<Module, Hashtable<Setting, SettingValue> >();
+			this.validValues = validValues;
 		}
-		public static boolean disableAutoScrollDown(Module module)
+		
+		public static void set(Module module, Setting setting, SettingValue value)
 		{
-			try
+			if(!(Arrays.asList(setting.validValues).contains(value)))
 			{
-				moduleSettings.get(module).put(AUTOSCROLLDOWN, DISABLED);
-				return true;
+				throw new TextParserException("Invalid setting value: "+value.toString());
 			}
-			catch(Exception e)
+			else
 			{
-				return false;
+				moduleSettings.putIfAbsent(module, new Hashtable<Setting,SettingValue>());
+				moduleSettings.get(module).put(setting, value);
 			}
 		}
-		public static boolean isAutoScrollDownEnabled(Module module)
+		public static SettingValue get(Module module, Setting setting)
 		{
-			try
-			{
-				// Feature is enabled by default.
-				return moduleSettings.get(module).getOrDefault(AUTOSCROLLDOWN, ENABLED) == ENABLED;
-			}
-			catch(Exception e)
-			{
-				TextParser.processException(e, Level.WARNING, false, null);
-				return true;
-			}
+			return moduleSettings.getOrDefault(module, new Hashtable<Setting, SettingValue>()).get(setting);
+		}
+		public static SettingValue get(Module module, Setting setting, SettingValue defaultValue)
+		{
+			if(!(Arrays.asList(setting.validValues).contains(defaultValue)))
+				throw new TextParserException("Invalid setting value: "+defaultValue.toString());
+			else
+				return Optional.ofNullable(get(module, setting)).orElse(defaultValue);
 		}
 	}
+	
+	public class Profile
+	{
+		public Profile()
+		{
+			components = new Hashtable<Component, Boolean>();
+		}
+		private Hashtable<Component, Boolean> components; 
+		public void addComponent(Component component)
+		{
+			components.put(component, component.isEnabled());
+		}
+		public void disableAll()
+		{
+			Enumeration<Component> keys = components.keys();
+			while(keys.hasMoreElements())
+			{
+				Component component = keys.nextElement();
+				components.replace(component, component.isEnabled());
+				component.setEnabled(false);
+			}
+		}
+		public void reenableAll()
+		{
+			Enumeration<Component> keys = components.keys();
+			while(keys.hasMoreElements())
+			{
+				Component component = keys.nextElement();
+				component.setEnabled(components.get(component));
+				components.replace(component, component.isEnabled());
+			}
+			
+		}
+	}
+	
 	public class ModuleRegistrant
 	{
 		private JMenu modulesMenu;
@@ -87,7 +118,14 @@ public class TextParser extends JFrame
 		
 		public void disableAutoScrollDown(Module module)
 		{
-			Settings.disableAutoScrollDown(module);
+			try
+			{
+				Setting.set(module, Setting.AUTOSCROLLDOWN, Setting.DISABLED);
+			}
+			catch(Exception e)
+			{
+				AppLogger.getLogger().log(Level.WARNING, "Unexpected Exception", e);
+			}
 		}
 		
 		public void addSubmenu(String submenuName)
@@ -149,7 +187,6 @@ public class TextParser extends JFrame
 			JRadioButtonMenuItem radioButtonMenuItem = new JRadioButtonMenuItem(moduleName);
 			submenuObject.add(radioButtonMenuItem);
 			moduleButtonGroup.add(radioButtonMenuItem);			
-			Settings.addModule(module);
 
 			radioButtonMenuItem.addActionListener(new ActionListener()
 			{
@@ -174,6 +211,7 @@ public class TextParser extends JFrame
 			return module;
 		}
 	}
+ 	
 	public static void main(String args[])
 	{
 		new TextParser("TextParser");
@@ -209,8 +247,22 @@ public class TextParser extends JFrame
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
 	private Module replacerModule;
 	private ConsoleDialog consoleDialog;
+	private Profile profile;
+	private JLabel bottomLabel;
 	
-
+	
+ 	private static void processException(Exception e, Level level, boolean popup, Component parent)
+ 	{
+ 		AppLogger.getLogger().log(level, "An Unexpected Exception Occurred", e);
+		if(popup)
+		{
+			if(e instanceof TextParserException)
+				JOptionPane.showMessageDialog(parent,"Error Occurred! \""+e.getMessage()+"\". Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+			else
+				JOptionPane.showMessageDialog(parent,"Exception Occurred! Please review Console for details","Error",JOptionPane.ERROR_MESSAGE);
+		}
+ 	}
+ 	
  	private String getClipboard()
 	{
     		Transferable t = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
@@ -230,34 +282,77 @@ public class TextParser extends JFrame
     		return null;
 	}
  	
+	private boolean isAutoScrollDownEnabled(Module module)
+	{
+		try
+		{
+			// Feature is enabled by default.
+			return Setting.get(module, Setting.AUTOSCROLLDOWN, Setting.ENABLED) == Setting.ENABLED;
+		}
+		catch(Exception e)
+		{
+			TextParser.processException(e, Level.WARNING, false, null);
+			return true;
+		}
+		
+	}
  	private void executeReplacementProcess()
  	{
  		String clipBoardContents = TextParser.this.getClipboard();
- 		try
- 		{
- 			if (clipBoardContents ==null)
- 				JOptionPane.showMessageDialog(this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
- 			else
- 			{
- 				Module.DataObjectTable dataObjectTable = null;
- 				if(!replacerModule.isPromptDisplayEnabled()
- 						|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
- 				{
- 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
- 					 *  from carrying over to subsequent executions (replacements)*/
- 					this.txt.setText(((Module)(replacerModule.clone())).runReplacements(clipBoardContents, dataObjectTable));
- 					//AutoScrollDown defaults to Enabled
- 					int caretPosition = TextParser.this.txt.getDocument().getLength();
- 					if(!Settings.isAutoScrollDownEnabled(replacerModule))
- 						caretPosition = 0;
+ 		
+		if (clipBoardContents ==null)
+				JOptionPane.showMessageDialog(this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
+		else
+		{		
+			new SwingWorker<Void,Void>()
+			{
+				public Void doInBackground()
+				{
+					try
+					{
+		 				Module.DataObjectTable dataObjectTable = null;
+		 				if(!replacerModule.isPromptDisplayEnabled()
+		 						|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
+		 				{
+		 					profile.disableAll();
+							TextParser.this.setStatus("Processing...");
+		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
+ 		 					 *  from carrying over to subsequent executions (replacements)*/
+ 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(clipBoardContents, dataObjectTable));
+ 		 					//AutoScrollDown defaults to Enabled
+ 		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
+ 		 					if(!isAutoScrollDownEnabled(replacerModule))
+ 		 						caretPosition = 0;
 
- 					TextParser.this.txt.setCaretPosition(caretPosition);
- 				}
- 			}
- 		}
- 		catch(Exception e)
+ 		 					TextParser.this.txt.setCaretPosition(caretPosition);
+		 				}
+					}
+					catch(Exception e)
+					{
+						TextParser.processException(e, Level.SEVERE, true, TextParser.this);
+					}
+					finally
+					{
+						profile.reenableAll();
+						TextParser.this.setStatus(null);
+					}
+					return null;
+				}
+			}.execute();
+		}
+ 	}
+ 	
+ 	private void setStatus(String status)
+ 	{
+ 		if(status == null)
  		{
- 			TextParser.processException(e, Level.SEVERE, true, TextParser.this);
+ 			bottomLabel.setText("");
+ 			bottomLabel.setVisible(false);
+ 		}
+ 		else
+ 		{
+ 	 		bottomLabel.setText(status);
+ 	 		bottomLabel.setVisible(true);
  		}
  	}
  	private class ConsoleDialog extends JDialog {
@@ -308,6 +403,7 @@ public class TextParser extends JFrame
 		aboutDialog = new JDialog(this,"Text Parser");
 		aboutDialog.setModal(true);
 		aboutLabel = new JLabel();
+		profile = new Profile();
 		aboutLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		aboutLabel.setVerticalAlignment(SwingConstants.CENTER);
 		aboutDialog.getContentPane().add(aboutLabel);
@@ -319,6 +415,10 @@ public class TextParser extends JFrame
 		scrollPane = new JScrollPane(txt);
 		file.add(about);
 		file.add(exit);
+		
+		bottomLabel = new JLabel("");
+		bottomLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		bottomLabel.setVisible(false);
 		
 		consoleDialog = new ConsoleDialog((JFrame) SwingUtilities.getWindowAncestor(this),"Console");
 		JTextArea consoleArea = consoleDialog.getTextArea();
@@ -407,8 +507,13 @@ public class TextParser extends JFrame
 		contentPane.add(mainMenu, BorderLayout.NORTH);
 		
 		mainMenu.add(mnModules);
+		profile.addComponent(edit);
+		profile.addComponent(mnModules);
+		profile.addComponent(about);
 		
+
 		contentPane.add(scrollPane, BorderLayout.CENTER);
+		contentPane.add(bottomLabel, BorderLayout.SOUTH);
 		
 		ModuleRegistrant reg = new ModuleRegistrant(mnModules,  moduleButtonGroup);
 		ModuleFactory.register(reg);
