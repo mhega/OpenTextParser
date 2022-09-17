@@ -1,3 +1,4 @@
+import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.function.Function;
@@ -71,7 +72,15 @@ public abstract class Module implements Cloneable
 		 * , it is created for loose-coupled interaction with interfacing classes. 
 		 */
 		private static final long serialVersionUID = 5524123527653934470L;
-
+		private BufferedReader reader = null;
+		private void setReader(BufferedReader reader)
+		{
+			this.reader = reader;
+		}
+		protected BufferedReader getReader()
+		{
+			return reader;
+		}
 		private DataObjectTable()
 		{
 			super();
@@ -109,25 +118,36 @@ public abstract class Module implements Cloneable
 		return output;
 	}
 	
-	public String runReplacements(String input, DataObjectTable dataObjectTable) throws Exception
+	public String runReplacements(Object input, DataObjectTable dataObjectTable) throws Exception
 	{
 		protect();
+		if(dataObjectTable == null)
+		{
+			dataObjectTable = new DataObjectTable();
+		}
 		listOfReplaceables  = new ArrayList<Replaceable>();
-		replace(input, dataObjectTable);
+		String stringInput = null;
+		if(input instanceof BufferedReader)
+			dataObjectTable.setReader((BufferedReader)input);
+		else if(input instanceof String)
+			stringInput = (String)input;
+			
+		replace(stringInput, dataObjectTable);
 		Replaceable[] replaceables = listOfReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
 		{
 			if(replaceables[i].replaceViaCallMethod())
 			{
-				input = callMethod(replaceables[i].callMethodToReplace,input);
+				stringInput = callMethod(replaceables[i].callMethodToReplace,stringInput);
 			}
 			else
 			{
-				input = input.replaceAll(replaceables[i].regex, replaceables[i].replacement);	
+				if(stringInput != null)
+					stringInput = stringInput.replaceAll(replaceables[i].regex, replaceables[i].replacement);	
 			}
 		}
 		
-		return input;
+		return stringInput;
 	}
 	
 }
