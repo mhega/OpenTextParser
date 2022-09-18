@@ -367,6 +367,8 @@ public class TextParser extends JFrame
  		 						caretPosition = 0;
 
  		 					TextParser.this.txt.setCaretPosition(caretPosition);
+ 		 					if(inputReader != null)
+ 		 						inputReader.close();
 		 				}
 					}
 					catch(Exception e)
@@ -551,7 +553,7 @@ public class TextParser extends JFrame
 					{
 						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
 						TextParser.this.executeReplacementProcess(inputReader);
-						inputReader.close();
+						//inputReader.close();
 					}
 					catch(IOException ioe)
 					{
