@@ -13,11 +13,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.1B
+	 * Text Parser V 4.1
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.1B";
+	private String version = "4.1";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -287,6 +287,7 @@ public class TextParser extends JFrame
 	private ConsoleDialog consoleDialog;
 	private Profile profile;
 	private JLabel bottomLabel;
+	private String moduleStatus;
 	
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
@@ -388,6 +389,7 @@ public class TextParser extends JFrame
  	
  	private void setStatus(String status)
  	{
+ 		moduleStatus = status;
  		if(status == null)
  		{
  			bottomLabel.setText("");
@@ -459,6 +461,7 @@ public class TextParser extends JFrame
 		scrollPane = new JScrollPane(txt);
 		file.add(about);
 		file.add(exit);
+		moduleStatus = null;
 		
 		bottomLabel = new JLabel("");
 		bottomLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -498,8 +501,11 @@ public class TextParser extends JFrame
 			public void keyPressed(KeyEvent ke)
 			{
 				if (ke.getKeyCode() == KeyEvent.VK_V && ke.isControlDown())
-				{				
-					TextParser.this.executeReplacementProcess(null);
+				{			
+					if(moduleStatus == null)
+						TextParser.this.executeReplacementProcess(null);
+					else
+						setStatus("PROCESSING...");
 				}
 			}
 		});
@@ -553,11 +559,10 @@ public class TextParser extends JFrame
 					{
 						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
 						TextParser.this.executeReplacementProcess(inputReader);
-						//inputReader.close();
 					}
 					catch(IOException ioe)
 					{
-						TextParser.processException(ioe, Level.SEVERE, true, TextParser.this);
+						TextParser.processException((TextParserException)(new TextParserException(ioe.getMessage()).initCause(ioe)), Level.SEVERE, true, TextParser.this);
 					}
 				}
 			}
