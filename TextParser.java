@@ -13,11 +13,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.0
+	 * Text Parser V 4.1
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.0";
+	private String version = "4.1";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -32,6 +32,7 @@ public class TextParser extends JFrame
 		public static final SettingValue DISABLED = SettingValue.DISABLED;
 		public static final SettingValue ENABLED = SettingValue.ENABLED;
 		public static final Setting AUTOSCROLLDOWN = new Setting(ENABLED, DISABLED);
+		public static final Setting FILEREADSUPPORT = new Setting(ENABLED, DISABLED);
 		private static Hashtable<Module, Hashtable<Setting, SettingValue> > moduleSettings;
 		
 		public final SettingValue[] validValues;
@@ -127,6 +128,32 @@ public class TextParser extends JFrame
 				AppLogger.getLogger().log(Level.WARNING, "Unexpected Exception", e);
 			}
 		}
+		public void enableFileReadSupport(Module module)
+		{
+			try
+			{
+				Setting.set(module, Setting.FILEREADSUPPORT, Setting.ENABLED);
+			}
+			catch(Exception e)
+			{
+				AppLogger.getLogger().log(Level.WARNING, "Unexpected Exception", e);
+			}
+		}
+		
+		private boolean isFileReadSupportEnabled(Module module)
+		{
+			try
+			{
+				// Feature is disabled by default.
+				return Setting.get(module, Setting.FILEREADSUPPORT, Setting.DISABLED) == Setting.ENABLED;
+			}
+			catch(Exception e)
+			{
+				TextParser.processException(e, Level.WARNING, false, null);
+				return false;
+			}
+			
+		}
 		
 		public void addSubmenu(String submenuName)
 		{
@@ -199,6 +226,7 @@ public class TextParser extends JFrame
 						txt.setText(promptText);
 					String crossModuleText = "Selected Module: "+moduleName+"<br>";
 					TextParser.this.aboutLabel.setText(TextParser.this.aboutTextHeader+crossModuleText+aboutText+"<br>"+TextParser.this.aboutTextFooter);
+					TextParser.this.open.setVisible(isFileReadSupportEnabled(module));
 					TextParser.this.aboutDialog.repaint();
 				}
 			});
@@ -214,7 +242,15 @@ public class TextParser extends JFrame
  	
 	public static void main(String args[])
 	{
-		new TextParser("TextParser");
+		try
+		{
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		 	new TextParser("TextParser");
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 	public TextParser(String name)
@@ -243,12 +279,15 @@ public class TextParser extends JFrame
 	private JButton aboutOkButton = new JButton("OK");
 	private JMenuItem copy = new JMenuItem("Copy");
 	private JMenuItem paste = new JMenuItem("Paste");
+	private JMenuItem open = new JMenuItem("Open");
+	private JFileChooser openChooser = new JFileChooser();
 	private final JMenu mnModules = new JMenu("Modules");
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
 	private Module replacerModule;
 	private ConsoleDialog consoleDialog;
 	private Profile profile;
 	private JLabel bottomLabel;
+	private String moduleStatus;
 	
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
@@ -263,18 +302,20 @@ public class TextParser extends JFrame
 		}
  	}
  	
- 	private String getClipboard()
+ 	private Object getInput(BufferedReader inputReader)
 	{
-    		Transferable t = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+ 		if(inputReader != null)
+ 				return inputReader;
+    	Transferable t = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
 
-    		try 
-    		{
-        		if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) 
-        		{
-            			String text = (String)t.getTransferData(DataFlavor.stringFlavor);
-            			return text;
-        		}
-    		}
+    	try 
+    	{
+        	if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) 
+        	{
+           			String text = (String)t.getTransferData(DataFlavor.stringFlavor);
+           			return text;
+        	}
+    	}
 		catch (UnsupportedFlavorException ufe)
 		{ufe.printStackTrace();}
 		catch (IOException ioe) 
@@ -296,11 +337,13 @@ public class TextParser extends JFrame
 		}
 		
 	}
- 	private void executeReplacementProcess()
+	
+
+ 	private void executeReplacementProcess(BufferedReader inputReader)
  	{
- 		String clipBoardContents = TextParser.this.getClipboard();
+ 		Object input = TextParser.this.getInput(inputReader);
  		
-		if (clipBoardContents ==null)
+		if (input ==null)
 				JOptionPane.showMessageDialog(this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 		else
 		{		
@@ -318,13 +361,15 @@ public class TextParser extends JFrame
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
- 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(clipBoardContents, dataObjectTable));
+ 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, dataObjectTable));
  		 					//AutoScrollDown defaults to Enabled
  		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
  		 					if(!isAutoScrollDownEnabled(replacerModule))
  		 						caretPosition = 0;
 
  		 					TextParser.this.txt.setCaretPosition(caretPosition);
+ 		 					if(inputReader != null)
+ 		 						inputReader.close();
 		 				}
 					}
 					catch(Exception e)
@@ -344,6 +389,7 @@ public class TextParser extends JFrame
  	
  	private void setStatus(String status)
  	{
+ 		moduleStatus = status;
  		if(status == null)
  		{
  			bottomLabel.setText("");
@@ -415,6 +461,7 @@ public class TextParser extends JFrame
 		scrollPane = new JScrollPane(txt);
 		file.add(about);
 		file.add(exit);
+		moduleStatus = null;
 		
 		bottomLabel = new JLabel("");
 		bottomLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -426,8 +473,10 @@ public class TextParser extends JFrame
 		displayConsoleDialogItem.setVisible(true);
 		file.add(displayConsoleDialogItem);
 		
+		open.setVisible(false);
 		edit.add(copy);
 		edit.add(paste);
+		edit.add(open);
 		file.setMnemonic(KeyEvent.VK_F);
 		edit.setMnemonic(KeyEvent.VK_E);
 		about.setMnemonic(KeyEvent.VK_A);
@@ -452,8 +501,11 @@ public class TextParser extends JFrame
 			public void keyPressed(KeyEvent ke)
 			{
 				if (ke.getKeyCode() == KeyEvent.VK_V && ke.isControlDown())
-				{				
-					TextParser.this.executeReplacementProcess();
+				{			
+					if(moduleStatus == null)
+						TextParser.this.executeReplacementProcess(null);
+					else
+						setStatus("PROCESSING...");
 				}
 			}
 		});
@@ -490,9 +542,32 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
-				TextParser.this.executeReplacementProcess();
+				TextParser.this.executeReplacementProcess(null);
 			}
 		});
+		
+		open.addActionListener(new ActionListener()
+		{
+			public void actionPerformed(ActionEvent ae)
+			{
+				int returnVal = openChooser.showOpenDialog(TextParser.this);
+				if(returnVal == JFileChooser.APPROVE_OPTION)
+				{
+					File inputFile = openChooser.getSelectedFile();
+					
+					try
+					{
+						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
+						TextParser.this.executeReplacementProcess(inputReader);
+					}
+					catch(IOException ioe)
+					{
+						TextParser.processException((TextParserException)(new TextParserException(ioe.getMessage()).initCause(ioe)), Level.SEVERE, true, TextParser.this);
+					}
+				}
+			}
+		});
+					
 		
 		aboutOkButton.addActionListener(new ActionListener()
 		{
