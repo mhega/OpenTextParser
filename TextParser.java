@@ -13,7 +13,7 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.1
+	 * Text Parser V 4.2
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
@@ -288,6 +288,7 @@ public class TextParser extends JFrame
 	private Profile profile;
 	private JLabel bottomLabel;
 	private String moduleStatus;
+	private SwingWorker<Void,Void> moduleWorker;
 	
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
@@ -302,10 +303,8 @@ public class TextParser extends JFrame
 		}
  	}
  	
- 	private Object getInput(BufferedReader inputReader)
+ 	private Object getInput()
 	{
- 		if(inputReader != null)
- 				return inputReader;
     	Transferable t = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
 
     	try 
@@ -341,35 +340,49 @@ public class TextParser extends JFrame
 
  	private void executeReplacementProcess(BufferedReader inputReader)
  	{
- 		Object input = TextParser.this.getInput(inputReader);
+ 		Object input = inputReader==null?TextParser.this.getInput():inputReader;
  		
 		if (input ==null)
 				JOptionPane.showMessageDialog(this,"Clipboard empty, or invalid","Error",JOptionPane.ERROR_MESSAGE);
 		else
 		{		
-			new SwingWorker<Void,Void>()
+			moduleWorker = new SwingWorker<Void,Void>()
 			{
+				private void tryToClose(Closeable reader)
+				{
+					try
+					{
+						if(reader!=null)
+							reader.close();
+					}
+					catch(Exception e)
+					{
+						TextParser.processException(e, Level.WARNING, false, TextParser.this);
+					}
+				}
 				public Void doInBackground()
 				{
 					try
 					{
-		 				Module.DataObjectTable dataObjectTable = null;
+		 				Module.ModuleContext moduleContext = null;
 		 				if(!replacerModule.isPromptDisplayEnabled()
-		 						|| (dataObjectTable = replacerModule.display(TextParser.this))!= null)
+		 						|| (moduleContext = replacerModule.display(TextParser.this))!= null)
 		 				{
+		 					if(moduleContext == null)
+		 					{
+		 						moduleContext = replacerModule.initContext();
+		 					}
 		 					profile.disableAll();
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
- 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, dataObjectTable));
+ 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, moduleContext));
  		 					//AutoScrollDown defaults to Enabled
  		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
  		 					if(!isAutoScrollDownEnabled(replacerModule))
  		 						caretPosition = 0;
 
  		 					TextParser.this.txt.setCaretPosition(caretPosition);
- 		 					if(inputReader != null)
- 		 						inputReader.close();
 		 				}
 					}
 					catch(Exception e)
@@ -380,10 +393,12 @@ public class TextParser extends JFrame
 					{
 						profile.reenableAll();
 						TextParser.this.setStatus(null);
+						tryToClose(inputReader);
 					}
 					return null;
 				}
-			}.execute();
+			};
+			moduleWorker.execute();
 		}
  	}
  	
@@ -462,6 +477,7 @@ public class TextParser extends JFrame
 		file.add(about);
 		file.add(exit);
 		moduleStatus = null;
+		moduleWorker = null;
 		
 		bottomLabel = new JLabel("");
 		bottomLabel.setHorizontalAlignment(SwingConstants.CENTER);

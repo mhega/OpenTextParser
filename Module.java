@@ -50,7 +50,7 @@ public abstract class Module implements Cloneable
 		 * Both Module and JFrame (Component) are passed to display method
 		 * , since it controls both GUI and module logic.
 		 * */
-		public DataObjectTable display(Module module, java.awt.Component parent);
+		public ModuleContext display(Module module, java.awt.Component parent);
 	}
 	private Displayable displayMethod = null;
 	public boolean isPromptDisplayEnabled()
@@ -61,11 +61,11 @@ public abstract class Module implements Cloneable
 			return true;
 	}
 	
-	public DataObjectTable getNewDataObjectTable()
+	public ModuleContext initContext()
 	{
-		return new DataObjectTable();
+		return new ModuleContext();
 	}
-	public class DataObjectTable extends Hashtable<String, Object>
+	public class ModuleContext extends Hashtable<String, Object>
 	{
 		/*
 		 * Although this class is no more than a Hashtable
@@ -73,15 +73,24 @@ public abstract class Module implements Cloneable
 		 */
 		private static final long serialVersionUID = 5524123527653934470L;
 		private BufferedReader reader = null;
+		private String inputString = null;
 		private void setReader(BufferedReader reader)
 		{
 			this.reader = reader;
+		}
+		private void setInputString(String inputString)
+		{
+			this.inputString = inputString;
 		}
 		protected BufferedReader getReader()
 		{
 			return reader;
 		}
-		private DataObjectTable()
+		protected String getInputString()
+		{
+			return inputString;
+		}
+		private ModuleContext()
 		{
 			super();
 		}
@@ -95,14 +104,14 @@ public abstract class Module implements Cloneable
 		return replaceable;
 	}
 	
-	protected abstract void replace(String input, DataObjectTable dataObjectTable);
+	protected abstract void replace(ModuleContext moduleContext);
 	
 	public void setPromptDisplayMethod(Displayable  d)
 	{
 		protect();
 		this.displayMethod = d;
 	}
-	public DataObjectTable display(java.awt.Component parent)
+	public ModuleContext display(java.awt.Component parent)
 	{
 		if(this.isPromptDisplayEnabled())
 			return this.displayMethod.display(this, parent);
@@ -111,41 +120,41 @@ public abstract class Module implements Cloneable
 	}
 
 	
-	protected String callMethod(Function<String,String> method, String input) throws Exception
+	protected String callMethod(Function<ModuleContext,String> method, ModuleContext moduleContext) throws Exception
 	{
 		String output = "";
-		output = method.apply(input);
+		output = method.apply(moduleContext);
 		return output;
 	}
 	
-	public String runReplacements(Object input, DataObjectTable dataObjectTable) throws Exception
+	public String runReplacements(Object input, ModuleContext moduleContext) throws Exception
 	{
 		protect();
-		if(dataObjectTable == null)
+		if(moduleContext == null)
 		{
-			dataObjectTable = new DataObjectTable();
+			throw new TextParserException("ModuleContext cannot be NULL.");
 		}
 		listOfReplaceables  = new ArrayList<Replaceable>();
-		String stringInput = null;
+
 		if(input == null)
 			throw new TextParserException("An Unexpected Exception Occurred");
 		else if(input instanceof BufferedReader)
-			dataObjectTable.setReader((BufferedReader)input);
+			moduleContext.setReader((BufferedReader)input);
 		else if(input instanceof String)
-			stringInput = (String)input;
+			moduleContext.setInputString((String)input);
 			
-		replace(stringInput, dataObjectTable);
+		replace(moduleContext);
 		Replaceable[] replaceables = listOfReplaceables.toArray(new Replaceable[0]);
 		for (int i=0 ; i<replaceables.length ; i++) 
 		{
 			if(replaceables[i].replaceViaCallMethod())
 			{
-				stringInput = callMethod(replaceables[i].callMethodToReplace,stringInput);
+				moduleContext.setInputString(callMethod(replaceables[i].callMethodToReplace,moduleContext));
 			}
 			else
 			{
-				if(stringInput != null)
-					stringInput = stringInput.replaceAll(replaceables[i].regex, replaceables[i].replacement);
+				if(moduleContext.getInputString() != null)
+					moduleContext.setInputString(moduleContext.getInputString().replaceAll(replaceables[i].regex, replaceables[i].replacement));
 				else if(i==0)
 				{
 					throw new TextParserException("The first replaceable can not be created without a method call if File Read Support is enabled.");
@@ -153,7 +162,7 @@ public abstract class Module implements Cloneable
 			}
 		}
 		
-		return stringInput;
+		return moduleContext.getInputString();
 	}
 	
 }
@@ -161,7 +170,7 @@ class Replaceable
 {
 	protected String regex;
 	protected String replacement;
-	protected Function<String,String> callMethodToReplace = null;
+	protected Function<Module.ModuleContext,String> callMethodToReplace = null;
 
 	public Replaceable(String regex, String replacement)
 	{
@@ -175,7 +184,7 @@ class Replaceable
 		this.replacement = "";
 	}
 	
-	public Replaceable setMethod(Function<String,String> method)
+	public Replaceable setMethod(Function<Module.ModuleContext,String> method)
 	{
 		this.callMethodToReplace = method;
 		return this;
