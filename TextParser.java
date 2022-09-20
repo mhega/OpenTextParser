@@ -17,7 +17,7 @@ public class TextParser extends JFrame
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.1";
+	private String version = "4.2";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
