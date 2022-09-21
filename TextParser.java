@@ -280,6 +280,7 @@ public class TextParser extends JFrame
 	private JMenuItem copy = new JMenuItem("Copy");
 	private JMenuItem paste = new JMenuItem("Paste");
 	private JMenuItem open = new JMenuItem("Open");
+	private JMenuItem cancel = new JMenuItem("Cancel");
 	private JFileChooser openChooser = new JFileChooser();
 	private final JMenu mnModules = new JMenu("Modules");
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
@@ -490,9 +491,11 @@ public class TextParser extends JFrame
 		file.add(displayConsoleDialogItem);
 		
 		open.setVisible(false);
+		//cancel.setVisible(false);
 		edit.add(copy);
 		edit.add(paste);
 		edit.add(open);
+		file.add(cancel);
 		file.setMnemonic(KeyEvent.VK_F);
 		edit.setMnemonic(KeyEvent.VK_E);
 		about.setMnemonic(KeyEvent.VK_A);
@@ -580,6 +583,17 @@ public class TextParser extends JFrame
 					{
 						TextParser.processException((TextParserException)(new TextParserException(ioe.getMessage()).initCause(ioe)), Level.SEVERE, true, TextParser.this);
 					}
+				}
+			}
+		});
+		
+		cancel.addActionListener(new ActionListener()
+		{
+			public void actionPerformed(ActionEvent ae)
+			{
+				if(moduleWorker.getState() == SwingWorker.StateValue.STARTED)
+				{
+					moduleWorker.cancel(true);
 				}
 			}
 		});
