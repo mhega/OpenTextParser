@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.3
+	 * Text Parser V 4.4
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.3";
+	private String version = "4.4";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -70,7 +70,7 @@ public class TextParser extends JFrame
 		}
 	}
 	
-	public class Profile
+	public static class Profile
 	{
 		public static enum ProfileFunctionality
 		{
