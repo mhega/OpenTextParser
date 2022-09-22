@@ -2,6 +2,8 @@ import javax.swing.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.awt.datatransfer.*;
 import java.io.*;
 import java.util.Arrays;
@@ -13,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.2
+	 * Text Parser V 4.3
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.2";
+	private String version = "4.3";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -33,6 +35,7 @@ public class TextParser extends JFrame
 		public static final SettingValue ENABLED = SettingValue.ENABLED;
 		public static final Setting AUTOSCROLLDOWN = new Setting(ENABLED, DISABLED);
 		public static final Setting FILEREADSUPPORT = new Setting(ENABLED, DISABLED);
+		public static final Setting MODULECANCELLATION = new Setting(ENABLED, DISABLED);
 		private static Hashtable<Module, Hashtable<Setting, SettingValue> > moduleSettings;
 		
 		public final SettingValue[] validValues;
@@ -69,14 +72,36 @@ public class TextParser extends JFrame
 	
 	public class Profile
 	{
+		public static enum ProfileFunctionality
+		{
+			ENABLEDISABLE, VISIBLEINVISIBLE;
+		}
+		private ProfileFunctionality profileFunctionality;
 		public Profile()
 		{
-			components = new Hashtable<Component, Boolean>();
+			this(ProfileFunctionality.ENABLEDISABLE);
 		}
+		public Profile(Profile.ProfileFunctionality functionality)
+		{
+			components = new Hashtable<Component, Boolean>();
+			profileFunctionality = functionality;
+		}
+		
 		private Hashtable<Component, Boolean> components; 
 		public void addComponent(Component component)
 		{
 			components.put(component, component.isEnabled());
+		}
+		private boolean getSettingValue(Component component)
+		{
+			if(ProfileFunctionality.ENABLEDISABLE.equals(this.profileFunctionality))
+				return component.isEnabled();
+			else if(ProfileFunctionality.VISIBLEINVISIBLE.equals(this.profileFunctionality))
+				return component.isVisible();
+			else
+			{
+				throw new TextParserException("Unexpected Exception");
+			}
 		}
 		public void disableAll()
 		{
@@ -84,8 +109,11 @@ public class TextParser extends JFrame
 			while(keys.hasMoreElements())
 			{
 				Component component = keys.nextElement();
-				components.replace(component, component.isEnabled());
-				component.setEnabled(false);
+				components.replace(component, getSettingValue(component));
+				if(ProfileFunctionality.ENABLEDISABLE.equals(this.profileFunctionality))
+					component.setEnabled(false);
+				else if(ProfileFunctionality.VISIBLEINVISIBLE.equals(this.profileFunctionality))
+					component.setVisible(false);
 			}
 		}
 		public void reenableAll()
@@ -94,7 +122,10 @@ public class TextParser extends JFrame
 			while(keys.hasMoreElements())
 			{
 				Component component = keys.nextElement();
-				component.setEnabled(components.get(component));
+				if(ProfileFunctionality.ENABLEDISABLE.equals(this.profileFunctionality))
+					component.setEnabled(components.get(component));
+				else if(ProfileFunctionality.VISIBLEINVISIBLE.equals(this.profileFunctionality))
+					component.setVisible(components.get(component));
 				components.replace(component, component.isEnabled());
 			}
 			
@@ -128,11 +159,20 @@ public class TextParser extends JFrame
 				AppLogger.getLogger().log(Level.WARNING, "Unexpected Exception", e);
 			}
 		}
+		
 		public void enableFileReadSupport(Module module)
+		{
+			//Default for MODULECANCELLATION is ENABLED
+			enableFileReadSupport(module, true);
+		}
+		
+		public void enableFileReadSupport(Module module, boolean canBeCancelled)
 		{
 			try
 			{
 				Setting.set(module, Setting.FILEREADSUPPORT, Setting.ENABLED);
+				//Default for MODULECANCELLATION is ENABLED
+				Setting.set(module, Setting.MODULECANCELLATION, canBeCancelled?Setting.ENABLED:Setting.DISABLED);;
 			}
 			catch(Exception e)
 			{
@@ -281,6 +321,7 @@ public class TextParser extends JFrame
 	private JMenuItem paste = new JMenuItem("Paste");
 	private JMenuItem open = new JMenuItem("Open");
 	private JMenuItem cancel = new JMenuItem("Cancel");
+	private Profile cancelProfile;
 	private JFileChooser openChooser = new JFileChooser();
 	private final JMenu mnModules = new JMenu("Modules");
 	private ButtonGroup moduleButtonGroup = new ButtonGroup();
@@ -338,6 +379,20 @@ public class TextParser extends JFrame
 		
 	}
 	
+	private boolean isModuleCancellationEnabled(Module module)
+	{
+		//Default for MODULECANCELLATION is ENABLED
+		try
+		{
+			return Setting.get(module, Setting.MODULECANCELLATION, Setting.ENABLED) == Setting.ENABLED;
+		}
+		catch(Exception e)
+		{
+			TextParser.processException(e, Level.WARNING, false, null);
+			return true;
+		}
+	}
+	
 
  	private void executeReplacementProcess(BufferedReader inputReader)
  	{
@@ -349,7 +404,7 @@ public class TextParser extends JFrame
 		{		
 			moduleWorker = new SwingWorker<Void,Void>()
 			{
-				private void tryToClose(Closeable reader)
+				public void tryToClose(Closeable reader)
 				{
 					try
 					{
@@ -374,6 +429,9 @@ public class TextParser extends JFrame
 		 						moduleContext = replacerModule.initContext();
 		 					}
 		 					profile.disableAll();
+		 					if(inputReader !=null
+		 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
+		 						cancelProfile.reenableAll();
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
@@ -393,13 +451,38 @@ public class TextParser extends JFrame
 					finally
 					{
 						profile.reenableAll();
+						if(inputReader !=null 
+								&& TextParser.this.isModuleCancellationEnabled(replacerModule))
+							cancelProfile.disableAll();
 						TextParser.this.setStatus(null);
 						tryToClose(inputReader);
 					}
 					return null;
 				}
 			};
+			moduleWorker.addPropertyChangeListener(new PropertyChangeListener()
+			{
+				public void propertyChange(PropertyChangeEvent pe)
+				{
+					if("state".equals(pe.getPropertyName())
+							&& SwingWorker.StateValue.DONE.equals(pe.getNewValue())
+							&& moduleWorker.isCancelled())
+					{
+						try
+						{
+							moduleWorker.getClass().getMethod("tryToClose", Closeable.class).invoke(moduleWorker, inputReader);
+						}
+						catch(Exception e)
+						{
+							AppLogger.getLogger().log(Level.WARNING, "Unexpected Exception Occurred. Execution could not be cancelled.", e);
+						}
+						
+					}
+				}
+				
+			});
 			moduleWorker.execute();
+			
 		}
  	}
  	
@@ -466,6 +549,7 @@ public class TextParser extends JFrame
 		aboutDialog.setModal(true);
 		aboutLabel = new JLabel();
 		profile = new Profile();
+		cancelProfile = new Profile(Profile.ProfileFunctionality.VISIBLEINVISIBLE);
 		aboutLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		aboutLabel.setVerticalAlignment(SwingConstants.CENTER);
 		aboutDialog.getContentPane().add(aboutLabel);
@@ -491,11 +575,15 @@ public class TextParser extends JFrame
 		file.add(displayConsoleDialogItem);
 		
 		open.setVisible(false);
-		//cancel.setVisible(false);
+		
+		/* cancel MenuItem is made visible or invisible via a profile.
+		 * So it should be initially made disabled */
+		cancel.setVisible(false);
+		
 		edit.add(copy);
 		edit.add(paste);
 		edit.add(open);
-		file.add(cancel);
+		edit.add(cancel);
 		file.setMnemonic(KeyEvent.VK_F);
 		edit.setMnemonic(KeyEvent.VK_E);
 		about.setMnemonic(KeyEvent.VK_A);
@@ -591,9 +679,13 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
-				if(moduleWorker.getState() == SwingWorker.StateValue.STARTED)
+				AppLogger.getLogger().log(Level.INFO,"Module Execution State: "+moduleWorker.getState().toString());
+				if(SwingWorker.StateValue.STARTED.equals(moduleWorker.getState()))
 				{
-					moduleWorker.cancel(true);
+					AppLogger.getLogger().log(Level.INFO
+							, "Trying to cancel. Cencellation "
+							+(moduleWorker.cancel(true)?"successful. An exception may be thrown due to early stream closure.":"failed."));
+					
 				}
 			}
 		});
@@ -612,10 +704,13 @@ public class TextParser extends JFrame
 		contentPane.add(mainMenu, BorderLayout.NORTH);
 		
 		mainMenu.add(mnModules);
-		profile.addComponent(edit);
+		//profile.addComponent(edit);
+		profile.addComponent(copy);
+		profile.addComponent(paste);
+		profile.addComponent(open);
 		profile.addComponent(mnModules);
 		profile.addComponent(about);
-		
+		cancelProfile.addComponent(cancel);
 
 		contentPane.add(scrollPane, BorderLayout.CENTER);
 		contentPane.add(bottomLabel, BorderLayout.SOUTH);
