@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.4
+	 * Text Parser V 4.5
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.4";
+	private String version = "4.5";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -267,6 +267,8 @@ public class TextParser extends JFrame
 					String crossModuleText = "Selected Module: "+moduleName+"<br>";
 					TextParser.this.aboutLabel.setText(TextParser.this.aboutTextHeader+crossModuleText+aboutText+"<br>"+TextParser.this.aboutTextFooter);
 					TextParser.this.open.setVisible(isFileReadSupportEnabled(module));
+					TextParser.this.fileNameLabel.setText("");
+					TextParser.this.fileNameLabel.setVisible(isFileReadSupportEnabled(module));
 					TextParser.this.aboutDialog.repaint();
 				}
 			});
@@ -316,6 +318,8 @@ public class TextParser extends JFrame
 	private JDialog aboutDialog;
 	private JLabel aboutLabel;
 	private JPanel aboutOkPanel = new JPanel();
+	private JPanel topPanel = new JPanel();
+	private JLabel fileNameLabel;
 	private JButton aboutOkButton = new JButton("OK");
 	private JMenuItem copy = new JMenuItem("Copy");
 	private JMenuItem paste = new JMenuItem("Paste");
@@ -432,6 +436,7 @@ public class TextParser extends JFrame
 		 					if(inputReader !=null
 		 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
 		 						cancelProfile.reenableAll();
+		 					fileNameLabel.setText("");
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
@@ -440,6 +445,9 @@ public class TextParser extends JFrame
  		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
  		 					if(!isAutoScrollDownEnabled(replacerModule))
  		 						caretPosition = 0;
+ 		 					
+ 		 					if(inputReader != null && !this.isCancelled())
+ 		 						fileNameLabel.setText((String)(inputReader.getClass().getMethod("getFileName").invoke(inputReader)));
 
  		 					TextParser.this.txt.setCaretPosition(caretPosition);
 		 				}
@@ -564,6 +572,8 @@ public class TextParser extends JFrame
 		moduleStatus = null;
 		moduleWorker = null;
 		
+		fileNameLabel = new JLabel("");
+		fileNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		bottomLabel = new JLabel("");
 		bottomLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		bottomLabel.setVisible(false);
@@ -575,6 +585,7 @@ public class TextParser extends JFrame
 		file.add(displayConsoleDialogItem);
 		
 		open.setVisible(false);
+		fileNameLabel.setVisible(false);
 		
 		/* cancel MenuItem is made visible or invisible via a profile.
 		 * So it should be initially made disabled */
@@ -664,7 +675,21 @@ public class TextParser extends JFrame
 					
 					try
 					{
-						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
+						//BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
+						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile))
+						{
+							private String fileName = "";
+							public String getFileName()
+							{
+								return fileName;
+							}
+							public BufferedReader setFileName(String fileName)
+							{
+								this.fileName = fileName;
+								return this;
+							}
+							
+						}.setFileName(inputFile.getName());
 						TextParser.this.executeReplacementProcess(inputReader);
 					}
 					catch(IOException ioe)
@@ -701,7 +726,11 @@ public class TextParser extends JFrame
 		
 		getContentPane().setLayout(new BorderLayout());
 		Container contentPane = this.getContentPane();
-		contentPane.add(mainMenu, BorderLayout.NORTH);
+		topPanel.setLayout(new BorderLayout());
+		topPanel.add(mainMenu, BorderLayout.NORTH);
+		topPanel.add(fileNameLabel, BorderLayout.SOUTH);
+		//contentPane.add(mainMenu, BorderLayout.NORTH);
+		contentPane.add(topPanel, BorderLayout.NORTH);
 		
 		mainMenu.add(mnModules);
 		//profile.addComponent(edit);
