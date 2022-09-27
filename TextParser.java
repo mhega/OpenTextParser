@@ -676,9 +676,11 @@ public class TextParser extends JFrame
 					try
 					{
 						//BufferedReader inputReader = new BufferedReader(new FileReader(inputFile));
+						@SuppressWarnings("resource")
 						BufferedReader inputReader = new BufferedReader(new FileReader(inputFile))
 						{
 							private String fileName = "";
+							@SuppressWarnings("unused")
 							public String getFileName()
 							{
 								return fileName;
