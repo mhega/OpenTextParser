@@ -1,7 +1,6 @@
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Date;
@@ -144,19 +143,15 @@ public class AppLogger /*extends Logger*/ {
 	private static Logger theLogger = null;
 	private static Logger dummy = null; /*Used for avoiding NullPointerException as a result of returning null Logger to the caller*/  
 
-	public static final String LOGOBANNERTEXTPARSER = new File("logo.txt")
+	public static final String LOGOBANNERTEXTPARSER = new Object()
 	{
-		private static final long serialVersionUID = -1860595016235229668L;
-
 		public String readLogo()
 		{
-			FileReader reader;
 			BufferedReader buffer;
 			StringBuffer result = new StringBuffer();
 			try
 			{
-				reader = new FileReader(this.getName());
-				buffer = new BufferedReader(reader);
+				buffer = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/logo.txt")));
 				
 				String line;
 				while((line = buffer.readLine())!=null)
