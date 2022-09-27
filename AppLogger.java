@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -141,15 +144,38 @@ public class AppLogger /*extends Logger*/ {
 	private static Logger theLogger = null;
 	private static Logger dummy = null; /*Used for avoiding NullPointerException as a result of returning null Logger to the caller*/  
 
-	private static final String LOGOBANNER = "\n"+
-			"  _                               _           _\n"+
-			" | |                             | |         | |\n"+
-			" | |_    ___   _ __    __ _    __| |   __ _  | |_    __ _\n"+
-			" | __|  / _ \\ | '__|  / _` |  / _` |  / _` | | __|  / _` |\n"+
-			" | |_  |  __/ | |    | (_| | | (_| | | (_| | | |_  | (_| |  _\n"+
-			"  \\__|  \\___| |_|     \\__,_|  \\__,_|  \\__,_|  \\__|  \\__,_| (_)\n";
+	public static final String LOGOBANNERTEXTPARSER = new File("logo.txt")
+	{
+		private static final long serialVersionUID = -1860595016235229668L;
 
-	public static final String LOGOBANNERTEXTPARSER = LOGOBANNER+"\n                      Text Parser\n\n";
+		public String readLogo()
+		{
+			FileReader reader;
+			BufferedReader buffer;
+			StringBuffer result = new StringBuffer();
+			try
+			{
+				reader = new FileReader(this.getName());
+				buffer = new BufferedReader(reader);
+				
+				String line;
+				while((line = buffer.readLine())!=null)
+				{
+					result.append(line+"\n");
+				}
+				buffer.close();
+			}
+			catch(Exception e)
+			{
+				return "";
+			}
+			
+			
+			return result.toString();
+			
+		}
+	}.readLogo();
+	
 	
 	public static final Level DISPLAY = new Level("DISPLAY",1800)
 	{
