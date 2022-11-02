@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.6
+	 * Text Parser V 4.7
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.6";
+	private String version = "4.7";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -173,6 +173,10 @@ public class TextParser extends JFrame
 				Setting.set(module, Setting.FILEREADSUPPORT, Setting.ENABLED);
 				//Default for MODULECANCELLATION is ENABLED
 				Setting.set(module, Setting.MODULECANCELLATION, canBeCancelled?Setting.ENABLED:Setting.DISABLED);;
+				if(module.equals(TextParser.this.replacerModule))
+				{
+					TextParser.this.open.setVisible(true);
+				}
 			}
 			catch(Exception e)
 			{
