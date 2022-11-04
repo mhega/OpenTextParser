@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.7
+	 * Text Parser V 4.8
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.7";
+	private String version = "4.8";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -340,6 +340,11 @@ public class TextParser extends JFrame
 	private String moduleStatus;
 	private SwingWorker<Void,Void> moduleWorker;
 	
+	public SwingWorker<Void,Void> getModuleWorker()
+	{
+		return moduleWorker;
+	}
+	
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
  	{
@@ -429,6 +434,9 @@ public class TextParser extends JFrame
 					try
 					{
 		 				Module.ModuleContext moduleContext = null;
+		 				if(inputReader !=null
+	 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
+	 						cancelProfile.reenableAll();
 		 				if(!replacerModule.isPromptDisplayEnabled()
 		 						|| (moduleContext = replacerModule.display(TextParser.this))!= null)
 		 				{
@@ -437,15 +445,13 @@ public class TextParser extends JFrame
 		 						moduleContext = replacerModule.initContext();
 		 					}
 		 					profile.disableAll();
-		 					if(inputReader !=null
-		 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
-		 						cancelProfile.reenableAll();
 		 					fileNameLabel.setText("");
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
- 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, moduleContext));
- 		 					//AutoScrollDown defaults to Enabled
+ 							String result = ((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, moduleContext);
+ 							TextParser.this.txt.setText(this.isCancelled()?"Execution Canceled!":result);
+ 							//AutoScrollDown defaults to Enabled
  		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
  		 					if(!isAutoScrollDownEnabled(replacerModule))
  		 						caretPosition = 0;
@@ -552,7 +558,7 @@ public class TextParser extends JFrame
  		}
  	}
  	
-	public void assemble()
+	private void assemble()
 	{	
 		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;V "+version+" R "+TextParser.getRelease()+"<br>"+
 				"Performs text cleanup / transformation according to the selected module.<br><br>";
