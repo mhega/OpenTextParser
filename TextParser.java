@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.8
+	 * Text Parser V 4.9
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.8";
+	private String version = "4.9";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -678,6 +678,8 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
+				File workingDirectory = new File(System.getProperty("user.dir"));
+				openChooser.setCurrentDirectory(workingDirectory);
 				int returnVal = openChooser.showOpenDialog(TextParser.this);
 				if(returnVal == JFileChooser.APPROVE_OPTION)
 				{
@@ -741,7 +743,6 @@ public class TextParser extends JFrame
 		topPanel.setLayout(new BorderLayout());
 		topPanel.add(mainMenu, BorderLayout.NORTH);
 		topPanel.add(fileNameLabel, BorderLayout.SOUTH);
-		//contentPane.add(mainMenu, BorderLayout.NORTH);
 		contentPane.add(topPanel, BorderLayout.NORTH);
 		
 		mainMenu.add(mnModules);
