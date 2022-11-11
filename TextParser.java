@@ -15,11 +15,11 @@ import java.util.logging.Level;
 public class TextParser extends JFrame
 {
 	/** 
-	 * Text Parser V 4.6
+	 * Text Parser V 4.9
 	 * Author: Mohamed Hegazy
 	 */
 	private static final long serialVersionUID = 9206356051216703918L;
-	private String version = "4.6";
+	private String version = "4.9";
 	private static String getRelease()
 	{
 		return ModuleFactory.getRelease();
@@ -173,6 +173,10 @@ public class TextParser extends JFrame
 				Setting.set(module, Setting.FILEREADSUPPORT, Setting.ENABLED);
 				//Default for MODULECANCELLATION is ENABLED
 				Setting.set(module, Setting.MODULECANCELLATION, canBeCancelled?Setting.ENABLED:Setting.DISABLED);;
+				if(module.equals(TextParser.this.replacerModule))
+				{
+					TextParser.this.open.setVisible(true);
+				}
 			}
 			catch(Exception e)
 			{
@@ -336,6 +340,11 @@ public class TextParser extends JFrame
 	private String moduleStatus;
 	private SwingWorker<Void,Void> moduleWorker;
 	
+	public SwingWorker<Void,Void> getModuleWorker()
+	{
+		return moduleWorker;
+	}
+	
 	
  	private static void processException(Exception e, Level level, boolean popup, Component parent)
  	{
@@ -425,6 +434,9 @@ public class TextParser extends JFrame
 					try
 					{
 		 				Module.ModuleContext moduleContext = null;
+		 				if(inputReader !=null
+	 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
+	 						cancelProfile.reenableAll();
 		 				if(!replacerModule.isPromptDisplayEnabled()
 		 						|| (moduleContext = replacerModule.display(TextParser.this))!= null)
 		 				{
@@ -433,15 +445,13 @@ public class TextParser extends JFrame
 		 						moduleContext = replacerModule.initContext();
 		 					}
 		 					profile.disableAll();
-		 					if(inputReader !=null
-		 							&& TextParser.this.isModuleCancellationEnabled(replacerModule))
-		 						cancelProfile.reenableAll();
 		 					fileNameLabel.setText("");
 							TextParser.this.setStatus("Processing...");
 		 					/*We are cloning this Module on the fly to safeguard the module by preventing instance variables that are created by ModuleFactory developer
  		 					 *  from carrying over to subsequent executions (replacements)*/
- 							TextParser.this.txt.setText(((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, moduleContext));
- 		 					//AutoScrollDown defaults to Enabled
+ 							String result = ((Module)(TextParser.this.replacerModule.clone())).runReplacements(input, moduleContext);
+ 							TextParser.this.txt.setText(this.isCancelled()?"Execution Canceled!":result);
+ 							//AutoScrollDown defaults to Enabled
  		 					int caretPosition = TextParser.this.txt.getDocument().getLength();
  		 					if(!isAutoScrollDownEnabled(replacerModule))
  		 						caretPosition = 0;
@@ -548,7 +558,7 @@ public class TextParser extends JFrame
  		}
  	}
  	
-	public void assemble()
+	private void assemble()
 	{	
 		aboutTextHeader = "<html><div align='CENTER'>Text Parser&nbsp;&nbsp;V "+version+" R "+TextParser.getRelease()+"<br>"+
 				"Performs text cleanup / transformation according to the selected module.<br><br>";
@@ -668,6 +678,8 @@ public class TextParser extends JFrame
 		{
 			public void actionPerformed(ActionEvent ae)
 			{
+				File workingDirectory = new File(System.getProperty("user.dir"));
+				openChooser.setCurrentDirectory(workingDirectory);
 				int returnVal = openChooser.showOpenDialog(TextParser.this);
 				if(returnVal == JFileChooser.APPROVE_OPTION)
 				{
@@ -731,7 +743,6 @@ public class TextParser extends JFrame
 		topPanel.setLayout(new BorderLayout());
 		topPanel.add(mainMenu, BorderLayout.NORTH);
 		topPanel.add(fileNameLabel, BorderLayout.SOUTH);
-		//contentPane.add(mainMenu, BorderLayout.NORTH);
 		contentPane.add(topPanel, BorderLayout.NORTH);
 		
 		mainMenu.add(mnModules);

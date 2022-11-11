@@ -50,7 +50,7 @@ public abstract class Module implements Cloneable
 		 * Both Module and JFrame (Component) are passed to display method
 		 * , since it controls both GUI and module logic.
 		 * */
-		public ModuleContext display(Module module, java.awt.Component parent);
+		public ModuleContext display(Module module, TextParser parent);
 	}
 	private Displayable displayMethod = null;
 	public boolean isPromptDisplayEnabled()
@@ -111,7 +111,7 @@ public abstract class Module implements Cloneable
 		protect();
 		this.displayMethod = d;
 	}
-	public ModuleContext display(java.awt.Component parent)
+	public ModuleContext display(TextParser parent)
 	{
 		if(this.isPromptDisplayEnabled())
 			return this.displayMethod.display(this, parent);
