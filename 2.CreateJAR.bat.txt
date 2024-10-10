@@ -1,0 +1,3 @@
+jar cfm TextParser.jar MANIFEST.MF *.class logo.txt
+java -jar TextParser.jar
+pause

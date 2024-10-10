@@ -1,0 +1,6 @@
+javac -classpath . -d . AppLogger.java
+javac -classpath . -d . Record.java
+javac -classpath . -d . Module.java
+javac -classpath . -d . TextParser.java
+javac -classpath . -d . ModuleFactory.java
+pause
